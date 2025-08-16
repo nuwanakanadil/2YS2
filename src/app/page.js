@@ -3,82 +3,107 @@
 import { Card, CardContent, CardMedia, Typography, Button, Grid } from '@mui/material';
 import Link from 'next/link';
 import Image from "next/image";
+import { useEffect,useState } from 'react';
 
 export default function Home() {
- const dummyItems = [
-    {
-      id: 1,
-      name: "Chicken Biryani",
-      image: "https://via.placeholder.com/400x250?text=Chicken+Biryani",
-      description: "Spicy basmati rice with tender chicken pieces.",
-      price: 750,
-      sellerId: "s001"
-    },
-    {
-      id: 2,
-      name: "Veg Kottu",
-      image: "https://via.placeholder.com/400x250?text=Veg+Kottu",
-      description: "Delicious Sri Lankan chopped roti with vegetables.",
-      price: 600,
-      sellerId: "s002"
-    },
-    {
-      id: 3,
-      name: "Pasta Carbonara",
-      image: "https://via.placeholder.com/400x250?text=Pasta+Carbonara",
-      description: "Creamy pasta with bacon, egg, and cheese.",
-      price: 850,
-      sellerId: "s003"
-    },
-    {
-      id: 4,
-      name: "Fried Rice",
-      image: "https://via.placeholder.com/400x250?text=Fried+Rice",
-      description: "Egg fried rice served with chili paste.",
-      price: 700,
-      sellerId: "s004"
-    },
-    {
-      id: 5,
-      name: "Burger Combo",
-      image: "https://via.placeholder.com/400x250?text=Burger+Combo",
-      description: "Beef burger with fries and soft drink.",
-      price: 950,
-      sellerId: "s005"
-    },
-  ];
+
+  const [products,setProducts] = useState([]);
+
+  useEffect(()=>{
+    fetch("http://localhost:5000/api/products")
+    .then((res)=> res.json())
+    .then((data)=> setProducts(data))
+    .catch((err)=>
+    console.error('Failed to fetch products: ',err));
+  },[]);
+
+   const [message, setMessage] = useState('');
+
+ const handleTestDistance = () => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        console.log('Your location:', latitude, longitude);
+
+        const res = await fetch('http://localhost:5000/api/calculate-distance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude }),
+        });
+
+        const data = await res.json();
+        console.log(`Distance to Canteen A: ${data.distance} km`);
+        setMessage(`Distance to Canteen A: ${data.distance} km`);
+      },
+      (err) => {
+        console.error('Geolocation error:', err.message);
+        setMessage('Failed to get location');
+      }
+    );
+  };
 
   return (
     <main className="p-6">
-      <Typography variant="h4" gutterBottom>
-        Welcome to MealMatrix
-      </Typography>
-      <Grid container spacing={4}>
-        {dummyItems.map((item) => (
-          <Grid item xs={12} sm={6} md={4} key={item.id}>
-            <Card className="shadow-lg">
-              <CardMedia component="img" height="180" image={item.image} alt={item.name} />
-              <CardContent>
-                <Typography variant="h6">{item.name}</Typography>
-                <Typography variant="body2" color="textSecondary" paragraph>
-                  {item.description}
-                </Typography>
-                <Typography variant="subtitle1" color="primary">
-                  Rs. {item.price}
-                </Typography>
-                <Link href={`/products/${item.id}`} passHref>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 1, backgroundColor: '#FF4081', textTransform: 'none' }}
-                  >
-                    Show More
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+  <Typography variant="h4" gutterBottom>
+    Welcome to MealMatrix
+  </Typography>
+
+  <Grid container spacing={4}>
+    {products.map((item) => (
+      <Grid
+        item
+        xs={12} sm={6} md={4} lg={3} xl={2.4} // ⬅️ ensures 4+ per row on big screens
+        key={item._id} // ⬅️ should use MongoDB _id
+      >
+        <Card className="shadow-lg h-full flex flex-col">
+          {/* Image */}
+          <CardMedia
+            component="img"
+            image={`http://localhost:5000/${item.image}`}
+            alt={item.name}
+            sx={{
+              height: 180,
+              objectFit: 'cover', // 👈 force consistent crop/fill
+            }}
+          />
+
+          {/* Content */}
+          <CardContent className="flex-grow">
+            <Typography variant="h6">{item.name}</Typography>
+            <Typography variant="body2" color="textSecondary" paragraph noWrap>
+              {item.description}
+            </Typography>
+            <Typography variant="subtitle1" color="primary">
+              Rs. {item.price}
+            </Typography>
+          </CardContent>
+
+          {/* Button */}
+          <CardContent>
+            <Link href={`/products/${item._id}`} passHref>
+              <Button
+                fullWidth
+                variant="contained"
+                sx={{
+                  backgroundColor: '#FF4081',
+                  textTransform: 'none',
+                  mt: 1
+                }}
+              >
+                Show More
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </Grid>
-    </main>
+    ))}
+  </Grid>
+
+   <div>
+      <h1>Location Tracker</h1>
+      <Button onClick={handleTestDistance}>Get Current Location</Button>
+      <p>{message}</p>
+    </div>
+</main>
   );
 }

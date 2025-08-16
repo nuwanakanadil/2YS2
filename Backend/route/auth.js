@@ -4,6 +4,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 
+
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
@@ -96,8 +97,10 @@ router.post('/login', async (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000 // 1 day
       })
+      
       .status(200)
       .json({ message: 'Login successful', userId: user._id, email: user.email });
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

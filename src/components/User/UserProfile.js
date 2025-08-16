@@ -106,6 +106,8 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
     });
 
     if (res.ok) {
+      localStorage.removeItem('email')
+      localStorage.clear()
       alert('Logged out successfully');
       router.refresh()
       router.push('/signin');
@@ -152,6 +154,10 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
       alert('Something went wrong');
     }
   };
+
+  const redirectToOrders = () => {
+    router.push('/Orders');
+  }
 
   if (loading) {
     return (
@@ -261,6 +267,20 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
             }}>
               Logout
             </Button>
+
+            <Button variant="contained" onClick={redirectToOrders} sx={{
+              backgroundColor: '#FF4081',
+              color: 'white',
+              marginLeft: '16px',
+              '&:hover': {
+                backgroundColor: '#e91e63',
+              },
+            }}>
+              Your orders
+            </Button>
+
+            
+            
             
           </div>
         </CardContent>
