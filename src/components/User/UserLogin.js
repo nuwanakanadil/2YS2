@@ -30,6 +30,8 @@ export default function UserLogin() {
 
     if (res.ok) {
       console.log('Logged in:', data);
+      localStorage.setItem('email', JSON.stringify(data.email));
+      localStorage.setItem('userId', data.userId);
       alert('Login successful!');
       // redirect or set session here
       router.push("/userProfile");

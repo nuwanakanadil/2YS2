@@ -20,6 +20,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
 import ContactMailIcon from '@mui/icons-material/ContactMail';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -82,12 +83,26 @@ export default function Navbar() {
   return (
     <nav className="bg-[#6F4E37] text-white py-3 shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 flex items-center justify-between">
-        {/* Hamburger for mobile */}
-        <div className="flex-1">
+        
+        {/* Left side: Hamburger + Cart */}
+        <div className="flex items-center flex-1">
+          {/* Hamburger for mobile */}
           <div className="md:hidden">
             <IconButton onClick={toggleDrawer(true)} className="text-white">
               <MenuIcon />
             </IconButton>
+          </div>
+
+          {/* Cart icon */}
+          <div className="ml-2">
+            <Tooltip title="Your Cart" arrow>
+              <IconButton
+                color="inherit"
+                onClick={() => router.push('/Cart')}
+              >
+                <ShoppingCartIcon />
+              </IconButton>
+            </Tooltip>
           </div>
         </div>
 
@@ -116,7 +131,7 @@ export default function Navbar() {
           </Tooltip>
         </div>
 
-        {/* Right side buttons or profile */}
+        {/* Right side buttons/profile */}
         <div className="hidden md:flex items-center justify-end flex-1 mr-4 mt-2 space-x-3">
           {user ? (
             <>
@@ -144,29 +159,29 @@ export default function Navbar() {
               </Menu>
             </>
           ) : (
-          <div className="flex">
-            {['/signin', '/signup', '/seller-login', '/be-a-seller'].map((path, index, arr) => (
-      <Button
-      key={index}
-      variant="contained"
-      sx={{
-        backgroundColor: '#FF4081',
-        '&:hover': { backgroundColor: '#ff5a95' },
-        textTransform: 'none',
-        minWidth: '100px',
-        marginRight: index !== arr.length - 1 ? '8px' : '0px', // Add margin to all except last
-      }}
-      size="small"
-      component={Link}
-      href={path}
-    >
-      {path === '/signin' && 'Sign In'}
-      {path === '/signup' && 'Sign Up'}
-      {path === '/seller-login' && 'Seller Login'}
-      {path === '/be-a-seller' && 'Be a Seller'}
-      </Button>
-            ))}
-          </div>
+            <div className="flex">
+              {['/signin', '/signup', '/seller-login', '/be-a-seller'].map((path, index, arr) => (
+                <Button
+                  key={index}
+                  variant="contained"
+                  sx={{
+                    backgroundColor: '#FF4081',
+                    '&:hover': { backgroundColor: '#ff5a95' },
+                    textTransform: 'none',
+                    minWidth: '100px',
+                    marginRight: index !== arr.length - 1 ? '8px' : '0px',
+                  }}
+                  size="small"
+                  component={Link}
+                  href={path}
+                >
+                  {path === '/signin' && 'Sign In'}
+                  {path === '/signup' && 'Sign Up'}
+                  {path === '/seller-login' && 'Seller Login'}
+                  {path === '/be-a-seller' && 'Be a Seller'}
+                </Button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -179,6 +194,7 @@ export default function Navbar() {
               <ListItem button component={Link} href="/about"><InfoIcon className="mr-2" /><ListItemText primary="About Us" /></ListItem>
               <ListItem button component={Link} href="/contact"><ContactMailIcon className="mr-2" /><ListItemText primary="Contact Us" /></ListItem>
               <ListItem button component={Link} href="/userProfile"><AccountCircleIcon className="mr-2" /><ListItemText primary="Profile" /></ListItem>
+              <ListItem button component={Link} href="/cart"><ShoppingCartIcon className="mr-2" /><ListItemText primary="Cart" /></ListItem>
             </List>
             <Divider className="my-4 border-pink-300" />
             <List>

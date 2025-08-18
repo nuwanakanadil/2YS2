@@ -1,9 +1,10 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const router = useRouter();
   const [item, setItem] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState({ name: "", comment: "", rating: 0 });
@@ -18,6 +19,13 @@ export default function ProductDetail() {
 
   useEffect(() => {
   if (!id) return;
+  // Fetch product by ID
+  fetch(`http://localhost:5000/api/products/${id}`)
+    .then(res => res.json())
+    .then(data => {
+      setItem(data);
+    })
+    .catch(err => console.error("Failed to fetch product", err));
   fetch(`http://localhost:5000/api/reviews/${id}`)
     .then(res => res.json())
     .then(data => {
@@ -26,21 +34,7 @@ export default function ProductDetail() {
       setDistribution(data.distribution);
     })
     .catch(err => console.error(err));
-    // Dummy product for now
-    setItem({
-      item_id: id,
-      name: "Premium Armchair",
-      price: 120,
-      description: "A comfortable and stylish armchair made with premium materials.",
-      image: "https://via.placeholder.com/400x300",
-      seller_id: 1,
-    });
-
-    setReviews([
-      { name: "Alice", date: "2 days ago", rating: 5, comment: "Loved it!" },
-      { name: "Bob", date: "3 days ago", rating: 4, comment: "Comfortable and looks great!" },
-    ]);
-  }, [id]);
+}, [id]);
 
   const createArray = (count) => Array.from({ length: count });
 
@@ -75,6 +69,65 @@ export default function ProductDetail() {
   }
 };
 
+const handleAddToCart = async () => {
+  const email = localStorage.getItem("email");
+  const userId = localStorage.getItem("userId");
+
+  if (!email || !userId) {
+    alert("Please log in to add items to cart.");
+    router.push("/signin");
+    return;
+  }
+
+  const res = await fetch("http://localhost:5000/api/cart/add", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "userId": userId
+    },
+    credentials:"include",
+    body: JSON.stringify({
+      productId: item._id,
+      name: item.name,
+      price: item.price,
+      image: item.image
+    })
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    alert("Item added to cart successfully!");
+  } else {
+    alert(data.message);
+  }
+};
+
+
+const detectFood = async () => {
+  const imageUrl = `http://localhost:5000/${item.image}`; // image from your Node backend
+
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+  const file = new File([blob], "image.jpg", { type: blob.type });
+
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await fetch("http://localhost:5050/predict", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    console.log("Detection result:", data);
+    router.push(`/CaloryDisplay?food=${data.prediction}`);
+  } else {
+    alert("Detection failed: " + data.error);
+  }
+};
+
+
   if (!item) return <div className="text-center text-white mt-10">Loading...</div>;
 
   return (
@@ -88,7 +141,7 @@ export default function ProductDetail() {
             <button className="absolute left-0 bg-white p-2 rounded-full shadow">
               ◀
             </button>
-            <img src={item.image} alt={item.name} className="rounded-lg max-h-96 w-full object-cover" />
+            <img src={`http://localhost:5000/${item.image}`} alt={item.name} className="rounded-lg max-h-96 w-full object-cover" />
             <button className="absolute right-0 bg-white p-2 rounded-full shadow">
               ▶
             </button>
@@ -123,12 +176,18 @@ export default function ProductDetail() {
               <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500">
                 Contact Seller
               </button>
-              <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500">
+              <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
+                onClick={handleAddToCart}>
                 Add to Cart
-              </button>
-                <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500">
+                </button>
+                <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500" 
+                 onClick={() => router.push(`/Order/${id}`)}>
                 Place Order
               </button>
+              <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
+              onClick={detectFood}>
+                detect food
+                </button>
             </div>
           </div>
         </div>
