@@ -7,11 +7,22 @@ const OrderSchema = new mongoose.Schema(
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     method: { type: String, enum: ["delivery", "pickup"], required: true },
-    address:{type:String},
-    status: { type: String, enum: ["pending", "placed"], default: "pending", index: true },
+    address: { type: String },
+    status: { 
+      type: String, 
+      enum: ["pending", "assigned", "out_for_delivery", "delivered", "cancelled"], 
+      default: "pending", 
+      index: true 
+    },
     expiresAt: { type: Date, required: true }, // now + 5 minutes
     price: { type: Number }, //store price per item
-    img: { type: String }, 
+    img: { type: String },
+    // Delivery assignment fields
+    deliveryPersonId: { type: String, default: null, index: true },
+    assignedAt: { type: Date },
+    estimatedDeliveryTime: { type: Date },
+    deliveredAt: { type: Date },
+    deliveryNotes: { type: String, default: '' },
   },
   { timestamps: true }
 );

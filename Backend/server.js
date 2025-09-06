@@ -12,6 +12,7 @@ const productsRoutes = require('./route/getProductDetails');
 const distance = require('./route/calculate_distance'); 
 const cartRoutes = require('./route/cart'); // Cart routes
 const orderplacement = require('./route/orderPlacement'); // Order placement routes
+const deliveryRoutes = require('./route/deliveryRoutes'); // Delivery person routes
 
 
 // Load environment variables
@@ -46,6 +47,7 @@ app.use('/api', productsRoutes); // Products endpoint base
 app.use('/api', distance); // Distance calculation endpoint base
 app.use('/api/cart', cartRoutes); // Cart endpoint base
 app.use('/api/orders', orderplacement); // Order placement endpoint base
+app.use('/api/delivery', deliveryRoutes); // Delivery person endpoint base
 
 // Start server
 const PORT = process.env.PORT || 5000;
