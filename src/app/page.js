@@ -1,25 +1,99 @@
+"use client";
 
-'use client';
-import { Card, CardContent, CardMedia, Typography, Button, Grid } from '@mui/material';
-import Link from 'next/link';
-import Image from "next/image";
-import { useEffect,useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
+import { Card, CardContent, Typography, Button, TextField } from "@mui/material";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function LandingPage() {
+  const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [term, setTerm] = useState("");
+  const [submittedTerm, setSubmittedTerm] = useState(""); // what user searched
 
-  const [products,setProducts] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/products");
+        const data = await res.json();
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Failed to load products", e);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-  useEffect(()=>{
-    fetch("http://localhost:5000/api/products")
-    .then((res)=> res.json())
-    .then((data)=> setProducts(data))
-    .catch((err)=>
-    console.error('Failed to fetch products: ',err));
-  },[]);
+  // Filter after user clicks Search (or presses Enter)
+  const filtered = useMemo(() => {
+    const q = (submittedTerm || "").trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) => {
+      const name = (p.name || "").toLowerCase();
+      const desc = (p.description || "").toLowerCase();
+      return name.includes(q) || desc.includes(q);
+    });
+  }, [products, submittedTerm]);
 
-   const [message, setMessage] = useState('');
+  const handleSearch = (e) => {
+    e?.preventDefault();
+    setSubmittedTerm(term);
+  };
 
- const handleTestDistance = () => {
+  const handleGoToProduct = (id) => {
+    router.push(`/products/${id}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ededed] flex items-center justify-center">
+        <p className="text-gray-700">Loading products…</p>
+      </div>
+    );
+  }
+
+  // ✅ FIX: accept the product "item" as a parameter
+  const handleAddToCart = async (item) => {
+    const email = localStorage.getItem("email");
+    const userId = localStorage.getItem("userId");
+
+    if (!email || !userId) {
+      alert("Please log in to add items to cart.");
+      router.push("/signin");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/cart/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          userId: userId,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          productId: item._id,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Item added to cart successfully!");
+      } else {
+        alert(data.message || "Failed to add item to cart.");
+      }
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      alert("Something went wrong while adding to cart.");
+    }
+  };
+  const handleTestDistance = () => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -41,69 +115,135 @@ export default function Home() {
       }
     );
   };
-
   return (
-    <main className="p-6">
-  <Typography variant="h4" gutterBottom>
-    Welcome to MealMatrix
-  </Typography>
+    <div className="min-h-screen bg-[#FFF6E5]">
+      {/* Your NAVBAR goes here */}
 
-  <Grid container spacing={4}>
-    {products.map((item) => (
-      <Grid
-        item
-        xs={12} sm={6} md={4} lg={3} xl={2.4} // ⬅️ ensures 4+ per row on big screens
-        key={item._id} // ⬅️ should use MongoDB _id
-      >
-        <Card className="shadow-lg h-full flex flex-col">
-          {/* Image */}
-          <CardMedia
-            component="img"
-            image={`http://localhost:5000/${item.image}`}
-            alt={item.name}
-            sx={{
-              height: 180,
-              objectFit: 'cover', // 👈 force consistent crop/fill
+      {/* Search Bar */}
+      <div className="w-full flex justify-center pt-6 pb-4">
+        <form
+          onSubmit={handleSearch}
+          className="w-full max-w-2xl px-4 flex gap-3 items-center"
+          role="search"
+          aria-label="Product search"
+        >
+          <TextField
+            fullWidth
+            label="Search products"
+            placeholder="Type product name or keywords…"
+            value={term}
+            color="#FF4081"
+            onChange={(e) => setTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearch(e);
             }}
           />
+          <Button
+            variant="contained"
+            onClick={handleSearch}
+            sx={{
+              backgroundColor: "#FF4081",
+              "&:hover": { backgroundColor: "#e91e63" },
+            }}
+          >
+            Search
+          </Button>
+        </form>
+      </div>
 
-          {/* Content */}
-          <CardContent className="flex-grow">
-            <Typography variant="h6">{item.name}</Typography>
-            <Typography variant="body2" color="textSecondary" paragraph noWrap>
-              {item.description}
-            </Typography>
-            <Typography variant="subtitle1" color="primary">
-              Rs. {item.price}
-            </Typography>
-          </CardContent>
+      {/* Results */}
+      <div className="px-6 pb-10">
+        {submittedTerm && (
+          <p className="text-sm text-gray-600 mb-3 px-1">
+            Showing results for: <span className="font-medium">“{submittedTerm}”</span>
+          </p>
+        )}
 
-          {/* Button */}
-          <CardContent>
-            <Link href={`/products/${item._id}`} passHref>
-              <Button
-                fullWidth
-                variant="contained"
-                sx={{
-                  backgroundColor: '#FF4081',
-                  textTransform: 'none',
-                  mt: 1
-                }}
+        {filtered.length === 0 ? (
+          <div className="w-full flex justify-center mt-12">
+            <Card className="shadow-lg w-full max-w-xl">
+              <CardContent
+                className="text-center py-10"
+                sx={{ backgroundColor: "#6F4E37", color: "white" }}
               >
-                Show More
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </Grid>
-    ))}
-  </Grid>
+                <Typography variant="h6">No products found</Typography>
+                <Typography variant="body2" color="text.secondary" className="mt-1">
+                  Try a different search term.
+                </Typography>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((item) => (
+              <Card
+                key={item._id}
+                className="shadow-lg"
+                sx={{ backgroundColor: "#6F4E37", color: "white" }}
+              >
+                <CardContent>
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => handleGoToProduct(item._id)}
+                    title="View details"
+                  >
+                    <img
+                      src={`http://localhost:5000/${item.image}`}
+                      alt={item.name}
+                      className="h-48 w-full object-cover mb-3 rounded"
+                    />
+                    <Typography variant="h6" className="truncate">
+                      {item.name}
+                    </Typography>
+                    <Typography className="mt-1">${item.price}</Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      className="mt-2 line-clamp-2"
+                    >
+                      {item.description}
+                    </Typography>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleGoToProduct(item._id)}
+                      sx={{
+                        color: "#FF4081",
+                        borderColor: "#FF4081",
+                        "&:hover": {
+                          color: "#e91e63",
+                          borderColor: "#e91e63",
+                          backgroundColor: "transparent",
+                        },
+                      }}
+                    >
+                      View
+                    </Button>
 
-   <div>
-      <h1>Location Tracker</h1>
-      <Button onClick={handleTestDistance}>Get Current Location</Button>
-      <p>{message}</p>
+                    {/* ✅ FIX: pass "item" to the handler */}
+                    <Button
+                      variant="outlined"
+                      sx={{
+                        color: "#FF4081",
+                        borderColor: "#FF4081",
+                        "&:hover": {
+                          color: "#e91e63",
+                          borderColor: "#e91e63",
+                          backgroundColor: "transparent",
+                        },
+                      }}
+                      onClick={() => handleAddToCart(item)}
+                    >
+                      Add to Cart
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-</main>
   );
 }
