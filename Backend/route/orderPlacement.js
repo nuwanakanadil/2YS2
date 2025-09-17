@@ -1,15 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 
 // Create an order (status starts as "pending" for 5 mins)
 router.post("/place", async (req, res) => {
   try {
-    const { userId, itemId, itemName, quantity, method,address, price,img } = req.body;
+    const { userId, itemId, itemName, quantity, method, address, price, img } = req.body;
 
     if (!userId || !itemId || !itemName || !quantity || !method) {
       return res.status(400).json({ message: "Missing required fields" });
     }
+
+    // 👇 NEW: derive canteenId from product
+    const product = await Product.findById(itemId).select("canteenId").lean();
+    if (!product || !product.canteenId) {
+      return res.status(400).json({ message: "Invalid product or canteen not found" });
+    }
+
+    // Calculate total amount (price per item * quantity)
+    const totalAmount = price * quantity;
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
@@ -25,9 +35,11 @@ router.post("/place", async (req, res) => {
       img,
       status: "pending",
       expiresAt,
+      canteenId: product.canteenId,
+      totalAmount, // Store the calculated total amount
     });
 
-     // setTimeout to update status to "placed" after 5 min
+    // setTimeout to update status to "placed" after 5 min
     setTimeout(async () => {
       try {
         await Order.findByIdAndUpdate(order._id, { status: "placed" });
@@ -36,8 +48,6 @@ router.post("/place", async (req, res) => {
         console.error("Error updating order after timeout:", updateErr);
       }
     }, 5 * 60 * 1000);
-
- 
 
     return res.status(201).json(order);
   } catch (err) {
@@ -56,33 +66,6 @@ router.get("/user/:userId", async (req, res) => {
   } catch (err) {
     console.error("Fetch orders error:", err);
     res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Cancel/Delete order
-router.delete("/:id", async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    if (order.status !== "pending") {
-      return res
-        .status(400)
-        .json({ error: "Only pending orders can be cancelled" });
-    }
-
-    // optional: also check expiry
-    if (new Date(order.expiresAt).getTime() <= Date.now()) {
-      return res
-        .status(400)
-        .json({ error: "Order can no longer be cancelled" });
-    }
-
-    await order.deleteOne();
-    res.json({ message: "Order cancelled successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
   }
 });
 

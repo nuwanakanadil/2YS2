@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Card, CardContent, Badge, Typography, Avatar, Button, Divider, TextField
+  Card,
+  CardContent,
+  Badge,
+  Typography,
+  Avatar,
+  Button,
+  Divider,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 const dummyChats = [
@@ -34,6 +48,13 @@ export default function ProfileComponent() {
   const [chats] = useState(dummyChats);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // delete-account dialog state
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [openPassword, setOpenPassword] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -62,66 +83,73 @@ export default function ProfileComponent() {
     router.push(`/chat/${username}`);
   };
 
-const handleUpdate = async () =>
-   { 
+  const handleUpdate = async () => {
     if (!user.firstName || !user.lastName || !user.email || !user.phone) {
       alert('First name, last name, email, and phone are required');
       return;
     }
 
-const emailRegex = /^[^\s@]+@[^\s@]+.[^\s@]+$/; const phoneRegex = /^\d{10}$/;
-  if (!emailRegex.test(user.email)){
-     alert('Invalid email format');
-     return;
-  }
-  if (!phoneRegex.test(user.phone)) { 
-  alert('Phone must be exactly 10 digits');
-   return;
-  }
-  try { const res = await fetch('http://localhost:5000/api/update-profile',
-    { method: 'PUT', headers: { 'Content-Type': 'application/json', }, credentials: 'include',
-    body: JSON.stringify({ firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone, universityId: user.universityId }) });
-  const data = await res.json();
+    const emailRegex = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
+    const phoneRegex = /^\d{10}$/;
 
-  if (res.ok) {
-  alert('Profile updated successfully');
-  setUser(data.updatedUser); // Update UI with new data
-  } else {
-  alert(data.message || 'Update failed');
-  }
+    if (!emailRegex.test(user.email)) {
+      alert('Invalid email format');
+      return;
+    }
+    if (!phoneRegex.test(user.phone)) {
+      alert('Phone must be exactly 10 digits');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          universityId: user.universityId,
+        }),
+      });
+      const data = await res.json();
 
-} 
-catch (err) { console.error('Update error:', err); alert('Something went wrong'); } 
-};
-
-  const handleDelete = () => {
-    console.log('Delete account');
+      if (res.ok) {
+        alert('Profile updated successfully');
+        setUser(data.updatedUser); // Update UI with new data
+      } else {
+        alert(data.message || 'Update failed');
+      }
+    } catch (err) {
+      console.error('Update error:', err);
+      alert('Something went wrong');
+    }
   };
 
   const handleLogout = async () => {
-  try {
-    const res = await fetch('http://localhost:5000/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
 
-    if (res.ok) {
-      localStorage.removeItem('email')
-      localStorage.clear()
-      alert('Logged out successfully');
-      router.refresh()
-      router.push('/signin');
-       // redirect to login
-    } else {
-      const data = await res.json();
-      alert(data.message || 'Logout failed');
+      if (res.ok) {
+        localStorage.removeItem('email');
+        localStorage.clear();
+        alert('Logged out successfully');
+        router.refresh();
+        router.push('/signin');
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Logout failed');
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+      alert('Something went wrong');
     }
-  } catch (err) {
-    console.error('Logout error:', err);
-    alert('Something went wrong');
-  }
+  };
 
-};
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
@@ -137,7 +165,7 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
       const res = await fetch('http://localhost:5000/api/upload-profile-pic', {
         method: 'POST',
         body: formData,
-        credentials:'include'
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -157,7 +185,7 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
 
   const redirectToOrders = () => {
     router.push('/Orders');
-  }
+  };
 
   if (loading) {
     return (
@@ -174,6 +202,57 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
     return <div className="text-center mt-10 text-red-500">User data could not be loaded.</div>;
   }
 
+  const handleDelete = () => {
+    setOpenConfirm(true);
+  };
+
+  // Deleet account : Confirm → proceed to password dialog
+  const confirmDeletion = () => {
+    setOpenConfirm(false);
+    setOpenPassword(true);
+  };
+
+  // Delet account: Submit password → call backend
+  const submitDeletion = async () => {
+    if (!deletePassword) {
+      alert('Please enter your password to confirm deletion.');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const res = await fetch('http://localhost:5000/api/auth/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Account deletion failed.');
+        return;
+      }
+
+      // Clear local client session info
+      localStorage.removeItem('email');
+      localStorage.clear();
+
+      alert('Your account has been deleted.');
+      setOpenPassword(false);
+
+      // Redirect to signup page
+      router.push('/signup');
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Something went wrong deleting your account.');
+    } finally {
+      setDeleting(false);
+      setDeletePassword('');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex flex-col lg:flex-row gap-6">
       {/* Account Details */}
@@ -187,19 +266,27 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
                 sx={{ width: 80, height: 80 }}
               />
               <div>
-                <Typography variant="h5" className="font-semibold text-white">{user.firstName} {user.lastName}</Typography>
-                <Typography variant="body2" className="text-white text-opacity-70">@{user.email}</Typography>
+                <Typography variant="h5" className="font-semibold text-white">
+                  {user.firstName} {user.lastName}
+                </Typography>
+                <Typography variant="body2" className="text-white text-opacity-70">
+                  @{user.email}
+                </Typography>
               </div>
             </div>
-            
-            <Button variant="outlined" onClick={handleDelete} sx={{
-              color: 'white',
-              borderColor: 'white',
-              '&:hover': {
-                borderColor: '#FF4081',
-                color: '#FF4081',
-              },
-            }}>
+
+            <Button
+              variant="outlined"
+              onClick={handleDelete}
+              sx={{
+                color: 'white',
+                borderColor: 'white',
+                '&:hover': {
+                  borderColor: '#FF4081',
+                  color: '#FF4081',
+                },
+              }}
+            >
               Delete Account
             </Button>
           </div>
@@ -247,41 +334,49 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
           </form>
 
           <div className="flex justify-end mt-6 space-x-5">
-            <Button variant="contained" onClick={handleUpdate} sx={{
-              backgroundColor: '#FF4081',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: '#e91e63',
-              },
-            }}>
+            <Button
+              variant="contained"
+              onClick={handleUpdate}
+              sx={{
+                backgroundColor: '#FF4081',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#e91e63',
+                },
+              }}
+            >
               Update Details
             </Button>
 
-             <Button variant="contained" onClick={handleLogout} sx={{
-              backgroundColor: '#FF4081',
-              color: 'white',
-              marginLeft: '16px',
-              '&:hover': {
-                backgroundColor: '#e91e63',
-              },
-            }}>
+            <Button
+              variant="contained"
+              onClick={handleLogout}
+              sx={{
+                backgroundColor: '#FF4081',
+                color: 'white',
+                marginLeft: '16px',
+                '&:hover': {
+                  backgroundColor: '#e91e63',
+                },
+              }}
+            >
               Logout
             </Button>
 
-            <Button variant="contained" onClick={redirectToOrders} sx={{
-              backgroundColor: '#FF4081',
-              color: 'white',
-              marginLeft: '16px',
-              '&:hover': {
-                backgroundColor: '#e91e63',
-              },
-            }}>
+            <Button
+              variant="contained"
+              onClick={redirectToOrders}
+              sx={{
+                backgroundColor: '#FF4081',
+                color: 'white',
+                marginLeft: '16px',
+                '&:hover': {
+                  backgroundColor: '#e91e63',
+                },
+              }}
+            >
               Your orders
             </Button>
-
-            
-            
-            
           </div>
         </CardContent>
       </Card>
@@ -290,7 +385,9 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
       <div className="w-full lg:w-1/2 p-4">
         <Card className="shadow-lg ">
           <CardContent className="p-6 bg-[#6F4E37]">
-            <Typography variant="h6" className="font-semibold text-white-800 mb-4">Chat</Typography>
+            <Typography variant="h6" className="font-semibold text-white-800 mb-4">
+              Chat
+            </Typography>
             <div className="space-y-4">
               {chats.map((chat, index) => (
                 <div
@@ -302,8 +399,12 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <Typography variant="subtitle1" className="font-medium text-gray-900">{chat.username}</Typography>
-                      <Typography variant="body2" className="text-gray-600 truncate max-w-xs">{chat.lastMessage}</Typography>
+                      <Typography variant="subtitle1" className="font-medium text-gray-900">
+                        {chat.username}
+                      </Typography>
+                      <Typography variant="body2" className="text-gray-600 truncate max-w-xs">
+                        {chat.lastMessage}
+                      </Typography>
                     </div>
                     {chat.unreadCount > 0 && (
                       <Badge
@@ -319,6 +420,56 @@ catch (err) { console.error('Update error:', err); alert('Something went wrong')
           </CardContent>
         </Card>
       </div>
+
+      {/* DIALOG 1: Confirm */}
+      <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
+        <DialogTitle>Delete account?</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete your account <b>{user?.email}</b>? This cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirm(false)}>Cancel</Button>
+          <Button color="error" onClick={confirmDeletion}>
+            Yes, delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* DIALOG 2: Password */}
+      <Dialog open={openPassword} onClose={() => setOpenPassword(false)}>
+        <DialogTitle>Confirm your password</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Password"
+            type={showPwd ? 'text' : 'password'}
+            fullWidth
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPwd((p) => !p)} edge="end">
+                    {showPwd ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Please enter your account password for <b>{user?.email}</b> to confirm deletion.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPassword(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button color="error" onClick={submitDeletion} disabled={deleting}>
+            {deleting ? 'Deleting...' : 'Delete account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
