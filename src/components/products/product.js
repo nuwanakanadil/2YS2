@@ -180,10 +180,25 @@ const detectFood = async () => {
                 onClick={handleAddToCart}>
                 Add to Cart
                 </button>
-                <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500" 
-                 onClick={() => router.push(`/Order/${id}`)}>
-                Place Order
-              </button>
+                <button
+                    className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
+                    onClick={() => {
+                      const userId = localStorage.getItem("userId");
+                      addToDraft(
+                        {
+                          _id: item._id,
+                          name: item.name,
+                          price: item.price,
+                          image: item.image,
+                        },
+                        userId
+                      );
+                      // go to the multi-item order page
+                      router.push("/Order");
+                    }}
+                  >
+                    Place Order
+                </button>
               <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
               onClick={detectFood}>
                 detect food
