@@ -587,29 +587,58 @@ router.get('/download-report', verifyDeliveryAuth, async (req, res) => {
 
 // =============== ADMIN ROUTES ===============
 
-// GET /api/delivery/admin/delivery-persons - Get all delivery persons (Admin only)
+// GET /api/delivery/admin/delivery-persons - Get all delivery persons with search (Admin only)
 router.get('/admin/delivery-persons', verifyDeliveryAuth, verifyDeliveryAdmin, async (req, res) => {
   try {
-    // First, let's get ALL delivery persons to see what we have
-    const allDeliveryPersons = await DeliveryPerson.find({})
+    const { search } = req.query;
+    
+    // Base query to filter only delivery persons (not admins)
+    let baseQuery = {
+      $or: [
+        { role: 'delivery_person' },
+        { role: { $exists: false } },
+        { role: null }
+      ]
+    };
+    
+    let finalQuery = baseQuery;
+    
+    // Add search filter if provided
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      const searchRegex = new RegExp(searchTerm, 'i');
+      
+      const searchConditions = {
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { universityId: searchRegex },
+          { email: searchRegex },
+          { phone: searchRegex },
+          { vehicleNumber: searchRegex }
+        ]
+      };
+      
+      finalQuery = {
+        $and: [
+          baseQuery,
+          searchConditions
+        ]
+      };
+    }
+    
+    const deliveryPersons = await DeliveryPerson.find(finalQuery)
       .select('-password')
+      .sort({ createdAt: -1 })
       .lean();
-    
-    console.log('All delivery persons in database:', allDeliveryPersons.length);
-    console.log('Delivery persons roles:', allDeliveryPersons.map(p => ({ name: `${p.firstName} ${p.lastName}`, role: p.role })));
-    
-    // Filter for delivery persons (excluding admins)
-    const deliveryPersons = allDeliveryPersons.filter(person => 
-      person.role === 'delivery_person' || !person.role // Include records without role field
-    );
-    
-    console.log('Filtered delivery persons:', deliveryPersons.length);
     
     res.json({
       success: true,
-      data: deliveryPersons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-      total: deliveryPersons.length
+      data: deliveryPersons,
+      total: deliveryPersons.length,
+      search: search || ''
     });
+    
   } catch (error) {
     console.error('Get delivery persons error:', error);
     res.status(500).json({ message: 'Server error' });

@@ -42,17 +42,6 @@ const deliveryPersonSchema = new mongoose.Schema({
     default: '',
   },
   // Delivery-specific fields
-  vehicleType: {
-    type: String,
-    enum: ['bicycle', 'motorcycle', 'car', 'scooter'],
-    required: true,
-    default: 'bicycle',
-  },
-  vehicleNumber: {
-    type: String,
-    default: '',
-    trim: true,
-  },
   isActive: {
     type: Boolean,
     default: true,
@@ -60,11 +49,6 @@ const deliveryPersonSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false,
-  },
-  deliveryArea: {
-    type: String,
-    default: '',
-    trim: true,
   },
   rating: {
     type: Number,
@@ -98,20 +82,6 @@ const deliveryPersonSchema = new mongoose.Schema({
       default: '',
     },
     relationship: {
-      type: String,
-      default: '',
-    },
-  },
-  documents: {
-    idCard: {
-      type: String,
-      default: '',
-    },
-    drivingLicense: {
-      type: String,
-      default: '',
-    },
-    vehicleRegistration: {
       type: String,
       default: '',
     },

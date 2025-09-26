@@ -22,7 +22,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Grid
+  Grid,
+  TextField,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
@@ -30,14 +33,21 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 export default function DeliveryAdminDashboard() {
   const [deliveryPersons, setDeliveryPersons] = useState([]);
+  const [allDeliveryPersons, setAllDeliveryPersons] = useState([]);
+  const [filteredDeliveryPersons, setFilteredDeliveryPersons] = useState([]);
   const [statistics, setStatistics] = useState({});
   const [loading, setLoading] = useState(true);
   const [adminInfo, setAdminInfo] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, person: null });
   const [message, setMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
   const router = useRouter();
 
   // Fetch admin info
@@ -70,31 +80,49 @@ export default function DeliveryAdminDashboard() {
   }, [router]);
 
   // Fetch delivery persons and statistics
-  const fetchData = async () => {
+  const fetchData = async (search = '') => {
     try {
-      console.log('Fetching delivery data...');
+      setSearching(!!search);
+      setIsSearchMode(!!search);
       
-      // Fetch delivery persons
-      const deliveryResponse = await fetch('http://localhost:5000/api/delivery/admin/delivery-persons', {
+      // If there's a search term, only fetch search results
+      // If no search term, fetch all delivery persons
+      const queryParams = new URLSearchParams();
+      if (search && search.trim()) {
+        queryParams.append('search', search.trim());
+      }
+      
+      const queryString = queryParams.toString();
+      const deliveryUrl = `http://localhost:5000/api/delivery/admin/delivery-persons${queryString ? '?' + queryString : ''}`;
+      
+      // Fetch delivery persons with or without search
+      const deliveryResponse = await fetch(deliveryUrl, {
         credentials: 'include',
       });
       
-      // Fetch statistics
+      // Only fetch statistics when not searching (or fetch them separately always)
       const statsResponse = await fetch('http://localhost:5000/api/delivery/admin/statistics', {
         credentials: 'include',
       });
-      
-      console.log('Delivery response status:', deliveryResponse.status);
-      console.log('Stats response status:', statsResponse.status);
       
       if (deliveryResponse.ok && statsResponse.ok) {
         const deliveryData = await deliveryResponse.json();
         const statsData = await statsResponse.json();
         
-        console.log('Delivery data:', deliveryData);
-        console.log('Stats data:', statsData);
+        // Update the displayed delivery persons with current results
+        const currentData = deliveryData.data || [];
+        setDeliveryPersons(currentData);
         
-        setDeliveryPersons(deliveryData.data || []);
+        // Store filtered results for search mode
+        if (search) {
+          setFilteredDeliveryPersons(currentData);
+        } else {
+          // Store all delivery persons when not searching
+          setAllDeliveryPersons(currentData);
+          setFilteredDeliveryPersons([]); // Clear filtered results
+        }
+        
+        // Always update statistics regardless of search
         setStatistics(statsData.data || {});
       } else {
         const deliveryError = await deliveryResponse.text();
@@ -108,6 +136,7 @@ export default function DeliveryAdminDashboard() {
       setMessage('Error fetching data. Please try again.');
     } finally {
       setLoading(false);
+      setSearching(false);
     }
   };
 
@@ -116,6 +145,53 @@ export default function DeliveryAdminDashboard() {
       fetchData();
     }
   }, [adminInfo]);
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (window.searchTimeout) {
+        clearTimeout(window.searchTimeout);
+      }
+    };
+  }, []);
+
+  // Handle search
+  const handleSearch = async (searchValue) => {
+    setSearchTerm(searchValue);
+    await fetchData(searchValue);
+  };
+
+  // Handle clear search
+  const handleClearSearch = async () => {
+    setSearchTerm('');
+    setIsSearchMode(false);
+    setFilteredDeliveryPersons([]);
+    await fetchData('');
+  };
+
+  // Handle search input change with debouncing
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchTerm(value);
+    
+    // Debounce search - wait 500ms after user stops typing
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      handleSearch(value);
+    }, 500);
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (event) => {
+    // Ctrl+F or Cmd+F to focus search (but let default behavior happen too)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+      // Let the default browser search happen, but this is for reference
+    }
+    // Escape to clear search
+    if (event.key === 'Escape' && searchTerm) {
+      handleClearSearch();
+    }
+  };
 
   // Handle delete delivery person
   const handleDeletePerson = async (personId) => {
@@ -129,8 +205,10 @@ export default function DeliveryAdminDashboard() {
       
       if (response.ok) {
         setMessage(data.message);
-        // Remove the deleted person from the list
-        setDeliveryPersons(prev => prev.filter(person => person._id !== personId));
+        
+        // Refresh the current view (with or without search)
+        await fetchData(searchTerm);
+        
         // Update statistics
         setStatistics(prev => ({
           ...prev,
@@ -176,6 +254,22 @@ export default function DeliveryAdminDashboard() {
     
     const config = statusConfig[status] || { color: 'default', label: status };
     return <Chip label={config.label} color={config.color} size="small" />;
+  };
+
+  // Helper function to highlight search terms
+  const highlightSearchTerm = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.toString().split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-200 text-yellow-800 font-semibold">
+          {part}
+        </span>
+      ) : part
+    );
   };
 
   if (loading) {
@@ -301,9 +395,110 @@ export default function DeliveryAdminDashboard() {
 
         {/* Delivery Persons Table */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <Typography variant="h5" className="font-bold text-[#6F4E37] mb-6">
-            Delivery Persons Management
-          </Typography>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <Typography variant="h5" className="font-bold text-[#6F4E37] mb-2">
+                {searchTerm ? 'Search Results' : 'Delivery Persons Management'}
+              </Typography>
+              {searchTerm && (
+                <Typography variant="body2" className="text-gray-600">
+                  🔍 Search Results for: "{searchTerm}" ({deliveryPersons.length} found)
+                </Typography>
+              )}
+              {!searchTerm && (
+                <Typography variant="body2" className="text-gray-600">
+                  📋 All Delivery Persons ({deliveryPersons.length} total)
+                </Typography>
+              )}
+            </div>
+            
+            {/* Search Bar */}
+            <div className="flex items-center gap-2">
+              <TextField
+                placeholder={searchTerm ? "Showing search results only..." : "🔍 Search delivery persons... (Press Esc to clear)"}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onKeyDown={handleKeyDown}
+                variant="outlined"
+                size="small"
+                className="min-w-[300px]"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: searchTerm ? '#FF4081' : '#6F4E37',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: searchTerm ? '#FF6B9D' : '#8B5A42',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: searchTerm ? '#FF4081' : '#6F4E37',
+                    },
+                    backgroundColor: searchTerm ? '#FFF8F8' : 'white',
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon className={searchTerm ? "text-pink-500" : "text-gray-400"} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={handleClearSearch}
+                        size="small"
+                        className="text-pink-500 hover:text-pink-700"
+                        title="Clear search and show all delivery persons"
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              {searching && (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF4081]" title="Searching..."></div>
+              )}
+              {searchTerm && !searching && (
+                <Chip 
+                  label="Search Mode" 
+                  size="small" 
+                  color="secondary" 
+                  className="bg-pink-100 text-pink-800"
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Search Results Info */}
+          {searchTerm && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Typography variant="body1" className="text-blue-800 font-semibold">
+                    {deliveryPersons.length === 0 
+                      ? `No delivery persons found matching "${searchTerm}"`
+                      : `${deliveryPersons.length} delivery person${deliveryPersons.length !== 1 ? 's' : ''} found`
+                    }
+                  </Typography>
+                  <Typography variant="body2" className="text-blue-600 mt-1">
+                    {deliveryPersons.length > 0 
+                      ? 'Only search results are displayed below. Clear search to see all delivery persons.'
+                      : 'Try a different search term or clear search to see all delivery persons.'
+                    }
+                  </Typography>
+                </div>
+                <Button
+                  size="small"
+                  onClick={handleClearSearch}
+                  className="text-blue-600 hover:text-blue-800 min-w-0 p-1"
+                  title="Clear search and show all delivery persons"
+                >
+                  <ClearIcon fontSize="small" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <TableContainer component={Paper} elevation={0}>
             <Table>
@@ -324,9 +519,33 @@ export default function DeliveryAdminDashboard() {
                 {deliveryPersons.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
-                      <Typography variant="body1" className="text-gray-500">
-                        No delivery persons found
-                      </Typography>
+                      {searchTerm ? (
+                        <div>
+                          <Typography variant="h6" className="text-gray-500 mb-2">
+                            No search results found
+                          </Typography>
+                          <Typography variant="body2" className="text-gray-400 mb-4">
+                            No delivery persons match your search for "{searchTerm}"
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            onClick={handleClearSearch}
+                            size="small"
+                            className="text-[#6F4E37] border-[#6F4E37] hover:bg-[#6F4E37] hover:text-white"
+                          >
+                            Show All Delivery Persons
+                          </Button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Typography variant="h6" className="text-gray-500 mb-2">
+                            No delivery persons found
+                          </Typography>
+                          <Typography variant="body2" className="text-gray-400">
+                            There are currently no delivery persons in the system
+                          </Typography>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -335,15 +554,15 @@ export default function DeliveryAdminDashboard() {
                       <TableCell>
                         <div>
                           <Typography variant="body2" className="font-medium">
-                            {person.firstName} {person.lastName}
+                            {highlightSearchTerm(`${person.firstName} ${person.lastName}`, searchTerm)}
                           </Typography>
                           <Typography variant="caption" className="text-gray-500">
-                            ID: {person.universityId}
+                            ID: {highlightSearchTerm(person.universityId, searchTerm)}
                           </Typography>
                         </div>
                       </TableCell>
-                      <TableCell>{person.email}</TableCell>
-                      <TableCell>{person.phone}</TableCell>
+                      <TableCell>{highlightSearchTerm(person.email, searchTerm)}</TableCell>
+                      <TableCell>{highlightSearchTerm(person.phone, searchTerm)}</TableCell>
                       <TableCell>
                         <div>
                           <Typography variant="body2" className="capitalize">
@@ -351,7 +570,7 @@ export default function DeliveryAdminDashboard() {
                           </Typography>
                           {person.vehicleNumber && (
                             <Typography variant="caption" className="text-gray-500">
-                              {person.vehicleNumber}
+                              {highlightSearchTerm(person.vehicleNumber, searchTerm)}
                             </Typography>
                           )}
                         </div>

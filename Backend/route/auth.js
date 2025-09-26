@@ -168,12 +168,6 @@ router.post('/delivery-signup', async (req, res) => {
     return res.status(400).json({ message: 'Phone number must be 10-15 digits' });
   }
 
-  // Validate vehicle type
-  const validVehicleTypes = ['bicycle', 'motorcycle', 'car', 'scooter'];
-  if (vehicleType && !validVehicleTypes.includes(vehicleType)) {
-    return res.status(400).json({ message: 'Invalid vehicle type' });
-  }
-
   try {
     // Check if email already exists in regular users
     const userExists = await User.findOne({ email });

@@ -1,12 +1,5 @@
 'use client';
 
-import {
-  TextField,
-  Button,
-  Paper,
-  Typography,
-  Box,
-} from '@mui/material';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -20,8 +13,6 @@ export default function DeliverySignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [vehicleType, setVehicleType] = useState('bicycle');
-  const [vehicleNumber, setVehicleNumber] = useState('');
   const [deliveryArea, setDeliveryArea] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -51,8 +42,6 @@ export default function DeliverySignup() {
       email,
       password,
       confirmPassword,
-      vehicleType,
-      vehicleNumber,
       deliveryArea,
     };
 
@@ -206,46 +195,6 @@ export default function DeliverySignup() {
                   required
                   class="w-full text-sm text-white-900 border border-slate-300 pl-4 pr-4 py-3 rounded-lg outline-blue-600"
                   placeholder="Confirm password"
-                />
-              </div>
-
-              {/* Vehicle Type */}
-              <div>
-                <label class="text-white-900 text-sm font-medium mb-2 block">Vehicle Type</label>
-                <select
-                  value={vehicleType}
-                  onChange={(e) => setVehicleType(e.target.value)}
-                  required
-                  class="w-full text-sm text-gray-900 border border-slate-300 pl-4 pr-4 py-3 rounded-lg outline-blue-600"
-                >
-                  <option value="bicycle">Bicycle</option>
-                  <option value="motorcycle">Motorcycle</option>
-                  <option value="scooter">Scooter</option>
-                  <option value="car">Car</option>
-                </select>
-              </div>
-
-              {/* Vehicle Number */}
-              <div>
-                <label class="text-white-900 text-sm font-medium mb-2 block">Vehicle Number</label>
-                <input
-                  type="text"
-                  value={vehicleNumber}
-                  onChange={(e) => setVehicleNumber(e.target.value)}
-                  class="w-full text-sm text-white-900 border border-slate-300 pl-4 pr-4 py-3 rounded-lg outline-blue-600"
-                  placeholder="Enter vehicle number (optional)"
-                />
-              </div>
-
-              {/* Delivery Area */}
-              <div>
-                <label class="text-white-900 text-sm font-medium mb-2 block">Preferred Delivery Area</label>
-                <input
-                  type="text"
-                  value={deliveryArea}
-                  onChange={(e) => setDeliveryArea(e.target.value)}
-                  class="w-full text-sm text-white-900 border border-slate-300 pl-4 pr-4 py-3 rounded-lg outline-blue-600"
-                  placeholder="Enter preferred delivery area"
                 />
               </div>
 
