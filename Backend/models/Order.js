@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const OrderSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, index: true }, // adapt to ObjectId if you use users collection
+    canteenId: { type: String, required: true, index: true },
     itemId: { type: String, required: true },
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },

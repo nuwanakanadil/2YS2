@@ -10,7 +10,7 @@ export default function useAuth() {
     const email = localStorage.getItem("email");
     if (!email) {
       alert("Please login first");
-      router.push("/signin");
+      router.push("/user/signin");
     }
   }, []);
 }
