@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= title %></title>
+  <style>
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 0; }
+    .banner { background: linear-gradient(90deg,#0f172a,#111827); color: white; padding: 28px 40px; display:flex; align-items:center; }
+    .logo { width:56px; height:56px; margin-right:16px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; }
+    .title { font-size:20px; font-weight:700; }
+    .meta { margin-left:auto; text-align:right; font-size:12px; color:#cbd5e1 }
+    .container { padding: 24px 40px; }
+    .kpi { display:flex; gap:18px; margin-bottom:18px }
+    .kpi .card { background:#f8fafc; padding:12px 16px; border-radius:8px; min-width:120px }
+    .kpi .value { font-size:18px; font-weight:700 }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th { text-align:left; background:#0f172a; color:#fff; padding:10px 12px; font-weight:700 }
+    td { padding:10px 12px; border-bottom:1px solid #e6eef5; }
+    tr:nth-child(even) td { background:#fbfdff }
+    .muted { color:#64748b }
+    footer { position:fixed; bottom:18px; left:40px; right:40px; font-size:11px; color:#94a3b8 }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <div class="logo">MM</div>
+    <div>
+      <div class="title"><%= title %></div>
+      <div class="muted"><%= subtitle %></div>
+    </div>
+    <div class="meta">Generated: <%= generatedAt %></div>
+  </div>
+
+  <div class="container">
+    <div class="kpi">
+      <% for(const k of kpis) { %>
+        <div class="card"><div class="muted"><%= k.label %></div><div class="value"><%= k.value %></div></div>
+      <% } %>
+    </div>
+
+    <h3><%= tableTitle %></h3>
+    <table>
+      <thead>
+        <tr>
+          <% for(const h of headers) { %>
+            <th><%= h %></th>
+          <% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% for(const row of rows) { %>
+          <tr>
+            <% for(const c of row) { %>
+              <td><%= c %></td>
+            <% } %>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>MealMatrix • <%= footerNote %></footer>
+</body>
+</html>
