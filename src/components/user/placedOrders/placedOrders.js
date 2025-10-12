@@ -2,25 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Rating,
-  Divider,
-  Chip,
-  Stack,
+  Card, CardContent, Typography, Button, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Rating,
+  Divider, Chip, Stack,
 } from "@mui/material";
 
-/* ---------------------------------------------------
-   helpers (kept; + status color + currency tweaks)
---------------------------------------------------- */
-
+/* helpers */
 function formatRemaining(expiresAt) {
   const diff = new Date(expiresAt).getTime() - Date.now();
   if (diff <= 0) return "00:00";
@@ -29,7 +16,6 @@ function formatRemaining(expiresAt) {
   const s = (secs % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
 }
-
 function formatTimeLeft(target) {
   const ms = Math.max(0, target.getTime() - Date.now());
   const s = Math.floor(ms / 1000);
@@ -37,8 +23,6 @@ function formatTimeLeft(target) {
   const r = s % 60;
   return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-
-/** Group orders into sessions. */
 function groupBySession(orders) {
   const map = new Map();
   for (const o of orders) {
@@ -66,54 +50,41 @@ function groupBySession(orders) {
     const c = new Date(o.createdAt);
     if (c < g.createdAtMin) g.createdAtMin = c;
     if (c > g.createdAtMax) g.createdAtMax = c;
-    g.totalAmount += Number(o.totalAmount || (o.price || 0) * (o.quantity || 0));
+
+    // IMPORTANT: use discounted per-line totals if present
+    const lineTotal = Number(o.totalAmount ?? (o.price || 0) * (o.quantity || 0));
+    g.totalAmount += lineTotal;
+
     if (o.method) g.methods.add(o.method);
   }
   return Array.from(map.values()).sort(
     (a, b) => b.createdAtMax.getTime() - a.createdAtMax.getTime()
   );
 }
-
-/** Status color mapping */
 const STATUS_COLORS = {
-  pending:           { bg: "#FFD54F", text: "#1a1a1a" }, // amber 300
-  placed:            { bg: "#81C784", text: "#0b3d0b" }, // green 300
-  cooking:           { bg: "#FFB74D", text: "#1a1a1a" }, // orange 300
-  ready:             { bg: "#64B5F6", text: "#0b355c" }, // blue 300
-  out_for_delivery:  { bg: "#BA68C8", text: "#23003a" }, // purple 300
-  delivered:         { bg: "#66BB6A", text: "#0b3d0b" }, // green 400
-  picked:            { bg: "#4DB6AC", text: "#003d3b" }, // teal 300
-  cancelled:         { bg: "#EF9A9A", text: "#3d0000" }, // red 300
-  default:           { bg: "rgba(255,255,255,0.18)", text: "#ffffff" },
+  pending: { bg: "#FFD54F", text: "#1a1a1a" },
+  placed: { bg: "#81C784", text: "#0b3d0b" },
+  cooking: { bg: "#FFB74D", text: "#1a1a1a" },
+  ready: { bg: "#64B5F6", text: "#0b355c" },
+  out_for_delivery: { bg: "#BA68C8", text: "#23003a" },
+  delivered: { bg: "#66BB6A", text: "#0b3d0b" },
+  picked: { bg: "#4DB6AC", text: "#003d3b" },
+  cancelled: { bg: "#EF9A9A", text: "#3d0000" },
+  default: { bg: "rgba(255,255,255,0.18)", text: "#ffffff" },
 };
-
-function prettyStatus(s) {
-  if (!s) return "";
-  return s.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
+function prettyStatus(s) { return s ? s.replace(/_/g, " ").replace(/\b\w/g, m => m.toUpperCase()) : ""; }
 function statusChipSx(status) {
-  const key = (status || "default");
-  const { bg, text } = STATUS_COLORS[key] || STATUS_COLORS.default;
-  return {
-    bgcolor: bg,
-    color: text,
-    fontWeight: 600,
-  };
+  const { bg, text } = STATUS_COLORS[status || "default"] || STATUS_COLORS.default;
+  return { bgcolor: bg, color: text, fontWeight: 600 };
 }
 
-/* ---------------------------------------------------
-   Download button (per session)
---------------------------------------------------- */
-
+/* Download button */
 function DownloadFinalBillButton({ sessionTs, userId, windowEndsAt }) {
   const [busy, setBusy] = useState(false);
   const [allowed, setAllowed] = useState(Date.now() >= new Date(windowEndsAt).getTime());
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setAllowed(Date.now() >= new Date(windowEndsAt).getTime());
-    }, 1000);
+    const t = setInterval(() => setAllowed(Date.now() >= new Date(windowEndsAt).getTime()), 1000);
     return () => clearInterval(t);
   }, [windowEndsAt]);
 
@@ -122,7 +93,8 @@ function DownloadFinalBillButton({ sessionTs, userId, windowEndsAt }) {
     setBusy(true);
     try {
       const check = await fetch(
-        `http://localhost:5000/api/orders/session/${sessionTs}?userId=${encodeURIComponent(userId)}`
+        `http://localhost:5000/api/orders/session/${sessionTs}?userId=${encodeURIComponent(userId)}`,
+        { credentials: "include" }
       );
       const info = await check.json();
       if (!check.ok) throw new Error(info?.message || "Failed to check bill status");
@@ -132,7 +104,8 @@ function DownloadFinalBillButton({ sessionTs, userId, windowEndsAt }) {
       }
 
       const res = await fetch(
-        `http://localhost:5000/api/orders/session/${sessionTs}/bill?userId=${encodeURIComponent(userId)}`
+        `http://localhost:5000/api/orders/session/${sessionTs}/bill?userId=${encodeURIComponent(userId)}`,
+        { credentials: "include" }
       );
       if (!res.ok) {
         const t = await res.text();
@@ -173,26 +146,22 @@ function DownloadFinalBillButton({ sessionTs, userId, windowEndsAt }) {
   );
 }
 
-/* ---------------------------------------------------
-   Page
---------------------------------------------------- */
-
 export default function PlacedOrders() {
   const [orders, setOrders] = useState(null);
   const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
 
-  // rating dialog state (kept)
+  // rating dialog (kept)
   const [rateOpen, setRateOpen] = useState(false);
   const [ratingOrderId, setRatingOrderId] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
-  // fetch orders (kept)
+  // fetch orders
   useEffect(() => {
     if (!userId) return;
     (async () => {
       try {
-        const r = await fetch(`http://localhost:5000/api/orders/user/${userId}`);
+        const r = await fetch(`http://localhost:5000/api/orders/user/${userId}`, { credentials: "include" });
         const data = await r.json();
         setOrders(data || []);
       } catch (e) {
@@ -202,19 +171,16 @@ export default function PlacedOrders() {
     })();
   }, [userId]);
 
-  // re-render each second for countdowns (kept)
+  // tick for countdowns
   useEffect(() => {
-    const t = setInterval(() => {
-      setOrders((prev) => (prev ? [...prev] : prev));
-    }, 1000);
+    const t = setInterval(() => setOrders(prev => (prev ? [...prev] : prev)), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // cancel (kept)
   const handleCancel = async (id) => {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${id}`, { method: "DELETE" });
+      const res = await fetch(`http://localhost:5000/api/orders/${id}`, { method: "DELETE", credentials: "include" });
       if (res.ok) {
         setOrders((prev) => prev?.filter((o) => o._id !== id) || []);
         alert("Order cancelled successfully!");
@@ -228,7 +194,6 @@ export default function PlacedOrders() {
     }
   };
 
-  // sessions
   const sessions = useMemo(() => (orders ? groupBySession(orders) : []), [orders]);
 
   if (orders === null) {
@@ -254,56 +219,41 @@ export default function PlacedOrders() {
           </Typography>
         )}
 
-        {/* One card per session */}
         <div className="grid grid-cols-1 gap-4">
           {sessions.map((sess) => {
             const isSession = !!sess.sessionTs;
-            const showBillBtn = isSession && userId && sess.windowEndsAt;
             const methods = Array.from(sess.methods || []);
 
             return (
-              <Card
-                key={sess.key}
-                className="rounded-2xl shadow overflow-hidden"
-                style={{ backgroundColor: "#6F4E37", color: "white" }}
-              >
+              <Card key={sess.key} className="rounded-2xl shadow overflow-hidden" style={{ backgroundColor: "#6F4E37", color: "white" }}>
                 <CardContent>
-                  {/* Header */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                       <Typography variant="h6" className="font-bold text-white">
                         {isSession ? `Order #${sess.sessionTs}` : "Single Order"}
                       </Typography>
                       <Stack direction="row" spacing={1}>
-                        {methods.map((m) => (
-                          <Chip key={m} size="small" label={m} />
-                        ))}
+                        {methods.map((m) => <Chip key={m} size="small" label={m} />)}
                       </Stack>
                     </div>
-
                     <div className="text-sm opacity-90">
-                      {new Date(sess.createdAtMin).toLocaleString()} →{" "}
-                      {new Date(sess.createdAtMax).toLocaleString()}
+                      {new Date(sess.createdAtMin).toLocaleString()} → {new Date(sess.createdAtMax).toLocaleString()}
                     </div>
                   </div>
 
-                  {/* Items list */}
                   <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.25)" }} />
 
                   <div className="space-y-2">
                     {sess.items.map((o) => {
                       const isPending = o.status === "pending";
-                      const stillCancelable =
-                        isPending && new Date(o.expiresAt).getTime() > Date.now();
+                      const stillCancelable = isPending && new Date(o.expiresAt).getTime() > Date.now();
                       const remaining = isPending ? formatRemaining(o.expiresAt) : null;
 
+                      // IMPORTANT: show *discounted* line totals
+                      const lineTotal = Number(o.totalAmount ?? (o.price ?? 0) * (o.quantity ?? 0));
+
                       return (
-                        <div
-                          key={o._id}
-                          className="flex items-start justify-between gap-3 p-2 rounded-lg"
-                          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                        >
-                          {/* Left: image + title + meta */}
+                        <div key={o._id} className="flex items-start justify-between gap-3 p-2 rounded-lg" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
                           <div className="flex items-start gap-3">
                             {o.img && (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -314,92 +264,40 @@ export default function PlacedOrders() {
                                 onError={(e) => (e.currentTarget.src = o.img)}
                               />
                             )}
-
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <Typography variant="subtitle1" className="font-bold text-white">
-                                  {o.itemName}
-                                </Typography>
-                                <Chip
-                                  size="small"
-                                  label={prettyStatus(o.status)}
-                                  sx={statusChipSx(o.status)}
-                                />
+                                <Typography variant="subtitle1" className="font-bold text-white">{o.itemName}</Typography>
+                                <Chip size="small" label={prettyStatus(o.status)} sx={statusChipSx(o.status)} />
                               </div>
                               <div className="text-sm opacity-90">
                                 <b>Qty:</b> {o.quantity} &nbsp;•&nbsp; <b>Method:</b> {o.method}
-                                {o.method === "delivery" && o.address ? (
-                                  <>
-                                    &nbsp;•&nbsp; <b>Address:</b> {o.address}
-                                  </>
-                                ) : null}
+                                {o.method === "delivery" && o.address ? (<>&nbsp;•&nbsp; <b>Address:</b> {o.address}</>) : null}
                               </div>
                               <div className="text-sm opacity-90">
-                                <b>Payment:</b> {o.Paymentmethod || "-"} &nbsp;•&nbsp; <b>Created:</b>{" "}
-                                {new Date(o.createdAt).toLocaleString()}
+                                <b>Payment:</b> {o.Paymentmethod || "-"} &nbsp;•&nbsp; <b>Created:</b> {new Date(o.createdAt).toLocaleString()}
                               </div>
                               <div className="text-sm">
-                                <b>Total:</b>{" "}
-                                {/* Rs. formatting (en-LK) */}
-                                Rs.{" "}
-                                {((o.price ?? 0) * (o.quantity ?? 0)).toLocaleString("en-LK")}
+                                <b>Total:</b> Rs. {lineTotal.toLocaleString("en-LK")}
                               </div>
-                              {isPending && (
-                                <div className="text-sm font-semibold">
-                                  <b>Time left:</b> {remaining}
-                                </div>
-                              )}
+                              {isPending && <div className="text-sm font-semibold"><b>Time left:</b> {remaining}</div>}
                             </div>
                           </div>
 
-                          {/* Right: per-item actions (kept) */}
                           <div className="flex flex-col items-end gap-2">
                             {stillCancelable ? (
-                              <Button variant="contained" color="error" onClick={() => handleCancel(o._id)}>
-                                Cancel
-                              </Button>
-                            ) : (
-                              <div />
-                            )}
-
-                            {/* Rate button — delivered + delivery */}
-                            {o.method === "delivery" && o.status === "delivered" && (
-                              <Button
-                                variant="outlined"
-                                onClick={() => {
-                                  setRatingOrderId(o._id);
-                                  setRatingValue(0);
-                                  setRateOpen(true);
-                                }}
-                                sx={{
-                                  color: "#FF4081",
-                                  borderColor: "#FF4081",
-                                  "&:hover": {
-                                    color: "#e91e63",
-                                    borderColor: "#e91e63",
-                                    backgroundColor: "transparent",
-                                  },
-                                }}
-                              >
-                                Rate delivery person
-                              </Button>
-                            )}
+                              <Button variant="contained" color="error" onClick={() => handleCancel(o._id)}>Cancel</Button>
+                            ) : (<div />)}
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Footer (totals + bill) */}
                   <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.25)" }} />
 
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <Typography variant="subtitle1" className="font-bold">
-                      {/* Rs. formatting (en-LK) */}
-                      Order Total:{" "}
-                      <strong>
-                        Rs. {Number(sess.totalAmount).toLocaleString("en-LK")}
-                      </strong>
+                      Order Total: <strong>Rs. {Number(sess.totalAmount).toLocaleString("en-LK")}</strong>
                     </Typography>
 
                     {sess.sessionTs && (
@@ -418,35 +316,16 @@ export default function PlacedOrders() {
       </div>
 
       {/* Rating dialog (kept) */}
-      <Dialog
-        open={rateOpen}
-        onClose={() => !ratingSubmitting && setRateOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={rateOpen} onClose={() => !ratingSubmitting && setRateOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Rate your delivery</DialogTitle>
         <DialogContent dividers>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              paddingTop: 8,
-              paddingBottom: 4,
-            }}
-          >
-            <Rating
-              value={ratingValue}
-              precision={0.5}
-              onChange={(_, v) => setRatingValue(v ?? 0)}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 8, paddingBottom: 4 }}>
+            <Rating value={ratingValue} precision={0.5} onChange={(_, v) => setRatingValue(v ?? 0)} />
             <span>{ratingValue || 0}/5</span>
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRateOpen(false)} disabled={ratingSubmitting}>
-            Cancel
-          </Button>
+          <Button onClick={() => setRateOpen(false)} disabled={ratingSubmitting}>Cancel</Button>
           <Button
             variant="contained"
             sx={{ textTransform: "none", backgroundColor: "#FF4081" }}
@@ -455,15 +334,12 @@ export default function PlacedOrders() {
               try {
                 if (!ratingOrderId) return;
                 setRatingSubmitting(true);
-                const res = await fetch(
-                  `http://localhost:5000/api/orders/${ratingOrderId}/rate-delivery`,
-                  {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ rating: ratingValue }),
-                  }
-                );
+                const res = await fetch(`http://localhost:5000/api/orders/${ratingOrderId}/rate-delivery`, {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ rating: ratingValue }),
+                });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.message || "Failed to submit rating");
                 alert("Thanks! Your rating was submitted.");

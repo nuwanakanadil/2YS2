@@ -31,6 +31,7 @@ const forgot = require('./route/userPasswordReset');
 const staffRoutes = require('./route/staff');
 const reportsRouter = require('./route/reports');
 const managerPromotions = require('./route/manager_promotions');
+const promoCode = require('./route/promo_code');
 
 const { Server } = require('socket.io');
 
@@ -176,6 +177,7 @@ io.on('connection', (socket) => {
     app.use('/api/staff', staffRoutes);
     app.use('/api/reports', reportsRouter);
     app.use('/api/manager/promotions', managerPromotions);
+    app.use('/api/promocode', promoCode);
     
     // Start scheduled expiry sweep (optional)
     try {
