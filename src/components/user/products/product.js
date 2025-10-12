@@ -76,7 +76,7 @@ const handleAddToCart = async () => {
 
   if (!email || !userId) {
     alert("Please log in to add items to cart.");
-    router.push("/signin");
+    router.push("/user/signin");
     return;
   }
 
@@ -133,7 +133,7 @@ const contactSeller = async () => {
     const userId = localStorage.getItem('userId');
     if (!userId) {
       alert('Please log in to chat with the seller.');
-      router.push('/signin');
+      router.push('/user/signin');
       return;
     }
     try {
@@ -149,7 +149,7 @@ const contactSeller = async () => {
         return;
       }
       // go to /chat/[conversationId]
-      router.push(`/chat/${data.conversationId}`);
+      router.push(`/user/chat/${data.conversationId}`);
     } catch (e) {
       console.error(e);
       alert('Network error starting chat');
