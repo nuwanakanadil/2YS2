@@ -3,7 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import MetricCard from "@/components/sales/dashboard/MetricCard";
-import SalesChart from "@/components/sales/dashboard/SalesChart";
+import SalesChart from "@/components/sales/dashboard/SalesTrendBars";
 import RecentPromotions from "@/components/sales/dashboard/RecentPromotions";
 import PendingApprovals from "@/components/sales/dashboard/PendingApprovals";
 import useDashboardSummary from "@/components/sales/dashboard/useDashboardSummary";
@@ -65,7 +65,7 @@ export default function Dashboard() {
 
       {/* Chart + approvals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0">
           <SalesChart title="Sales Trends" />
         </div>
         <div>

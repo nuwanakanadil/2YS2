@@ -36,9 +36,9 @@ export default function DeliveryLogin() {
       
       // Redirect based on role
       if (data.role === 'delivery_admin') {
-        router.push("/delivery-admin-dashboard");
+        router.push("/delivery/delivery-admin-dashboard");
       } else {
-        router.push("/deliveryDashboard");
+        router.push("/delivery/deliveryDashboard");
       }
     } else {
       alert(data.message || 'Delivery login failed');
@@ -115,7 +115,7 @@ export default function DeliveryLogin() {
                 </button>
                 <p className="text-sm mt-6 text-center text-white">
                   Do not Have an account?
-                  <a href="/delivery-signup" className="text-white font-medium hover:underline ml-1">
+                  <a href="/delivery/delivery-signup" className="text-white font-medium hover:underline ml-1">
                     Sign Up
                   </a>
                 </p>

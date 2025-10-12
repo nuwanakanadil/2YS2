@@ -68,13 +68,9 @@ const deliveryPersonSchema = new mongoose.Schema({
   // Admin role field
   role: {
     type: String,
-    enum: ['delivery_person'],
+    enum: ['delivery_person', 'delivery_admin'],
     default: 'delivery_person',
   },
-
-  lastAssignedAt: { type: Date, default: null },
-  totalAssigned: { type: Number, default: 0 },
-  totalRatingsCount: { type: Number, default: 0 },
   // Additional fields for comprehensive delivery person profile
   emergencyContact: {
     name: {

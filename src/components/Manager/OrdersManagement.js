@@ -29,15 +29,19 @@ const TABS = [
   { key: 'finished', label: 'Finished orders' },
 ];
 
+// Brand colors
+const PINK = '#FF4081';
+const PINK_HOVER = '#ff5a95';
+const PINK_OUTLINE_BG = 'rgba(255, 64, 129, 0.08)';
+
 export default function ManageOrdersPage() {
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);  // session rows for current tab
+  const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [activeTab, setActiveTab] = useState('placed');
 
-  // menu state for "Update status" (in Placed)
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuSessionTs, setMenuSessionTs] = useState(null);
 
@@ -62,12 +66,10 @@ export default function ManageOrdersPage() {
 
   useEffect(() => {
     fetchSessions(activeTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // ----- Actions -----
 
-  // Assign delivery (ready -> out_for_delivery)
   const handleAssignDeliveryForSession = async (sessionTs) => {
     try {
       const res = await fetch(`http://localhost:5000/api/canteen/order-sessions/${sessionTs}/assign-delivery`, {
@@ -83,7 +85,6 @@ export default function ManageOrdersPage() {
     }
   };
 
-  // Update status for the whole session (optionally just pickup/delivery via method)
   const updateStatus = async (sessionTs, toStatus, method) => {
     try {
       const res = await fetch(`http://localhost:5000/api/canteen/order-sessions/${sessionTs}/update-status`, {
@@ -114,8 +115,18 @@ export default function ManageOrdersPage() {
 
   const placedHeaderExtra = useMemo(() => (
     <Stack direction="row" spacing={1}>
-      <Chip label={`Sessions: ${rows.length}`} color="primary" />
-      <Button variant="outlined" size="small" onClick={() => fetchSessions(activeTab)} sx={{ textTransform: 'none' }}>
+      <Chip label={`Sessions: ${rows.length}`} sx={{ bgcolor: PINK, color: '#fff', fontWeight: 600 }} />
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => fetchSessions(activeTab)}
+        sx={{
+          textTransform: 'none',
+          borderColor: PINK,
+          color: PINK,
+          '&:hover': { borderColor: PINK_HOVER, color: PINK_HOVER, backgroundColor: PINK_OUTLINE_BG },
+        }}
+      >
         Refresh
       </Button>
     </Stack>
@@ -127,8 +138,7 @@ export default function ManageOrdersPage() {
     <Box className="min-h-screen bg-gray-50 p-4 md:p-6">
       <Card className="shadow-lg">
         <CardContent>
-
-          {/* Top controls: tabs as buttons */}
+          {/* Tabs as pink buttons */}
           <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
             {TABS.map(t => (
               <Button
@@ -136,7 +146,16 @@ export default function ManageOrdersPage() {
                 variant={activeTab === t.key ? 'contained' : 'outlined'}
                 size="small"
                 onClick={() => setActiveTab(t.key)}
-                sx={{ textTransform: 'none' }}
+                sx={{
+                  textTransform: 'none',
+                  ...(activeTab === t.key
+                    ? { backgroundColor: PINK, '&:hover': { backgroundColor: PINK_HOVER } }
+                    : {
+                        borderColor: PINK,
+                        color: PINK,
+                        '&:hover': { borderColor: PINK_HOVER, color: PINK_HOVER, backgroundColor: PINK_OUTLINE_BG },
+                      }),
+                }}
               >
                 {t.label}
               </Button>
@@ -175,20 +194,13 @@ export default function ManageOrdersPage() {
                     <TableCell align="right">Total (Rs.)</TableCell>
                     <TableCell>Methods</TableCell>
                     <TableCell>Ordered Window</TableCell>
-
-                    {/* Column differs by tab */}
                     {activeTab === 'out_for_delivery' ? (
                       <TableCell>Delivery person(s)</TableCell>
                     ) : activeTab === 'finished' ? null : (
                       <TableCell>Delivery</TableCell>
                     )}
-
                     <TableCell>Details</TableCell>
-
-                    {/* Action column varies by tab; finished has no action column */}
-                    {activeTab === 'finished' ? null : (
-                      <TableCell align="center">Action</TableCell>
-                    )}
+                    {activeTab === 'finished' ? null : <TableCell align="center">Action</TableCell>}
                   </TableRow>
                 </TableHead>
 
@@ -214,9 +226,7 @@ export default function ManageOrdersPage() {
                               <Chip key={it.orderId} size="small" label={`${it.itemName} ×${it.quantity}`} />
                             ))}
                             {extra > 0 && (
-                              <Tooltip
-                                title={(r.items || []).map(it => `${it.itemName} ×${it.quantity}`).join(', ')}
-                              >
+                              <Tooltip title={(r.items || []).map(it => `${it.itemName} ×${it.quantity}`).join(', ')}>
                                 <Chip size="small" label={`+${extra} more`} />
                               </Tooltip>
                             )}
@@ -241,12 +251,9 @@ export default function ManageOrdersPage() {
                           </Typography>
                         </TableCell>
 
-                        {/* Delivery/Assigned column OR Delivery person(s) OR nothing (finished) */}
                         {activeTab === 'out_for_delivery' ? (
                           <TableCell>
-                            {(r.deliveryPersons || []).length
-                              ? (r.deliveryPersons || []).join(', ')
-                              : '—'}
+                            {(r.deliveryPersons || []).length ? (r.deliveryPersons || []).join(', ') : '—'}
                           </TableCell>
                         ) : activeTab === 'finished' ? null : (
                           <TableCell>
@@ -263,30 +270,42 @@ export default function ManageOrdersPage() {
                             variant="text"
                             size="small"
                             onClick={() => openDetails(r)}
-                            sx={{ textTransform: 'none' }}
+                            sx={{
+                              textTransform: 'none',
+                              color: PINK,
+                              '&:hover': { color: PINK_HOVER, backgroundColor: PINK_OUTLINE_BG },
+                            }}
                           >
                             View details
                           </Button>
                         </TableCell>
 
-                        {/* Action buttons per tab */}
                         {activeTab === 'finished' ? null : (
                           <TableCell align="center">
-                            {/* PLACED: Update status (menu with Cooking/Ready) */}
                             {activeTab === 'placed' && (
                               <>
                                 <Button
                                   variant="contained"
                                   size="small"
-                                  sx={{ textTransform: 'none' }}
-                                  onClick={(e) => { setAnchorEl(e.currentTarget); setMenuSessionTs(r.sessionTs); }}
+                                  sx={{
+                                    textTransform: 'none',
+                                    backgroundColor: PINK,
+                                    '&:hover': { backgroundColor: PINK_HOVER },
+                                  }}
+                                  onClick={(e) => {
+                                    setAnchorEl(e.currentTarget);
+                                    setMenuSessionTs(r.sessionTs);
+                                  }}
                                 >
                                   Update status
                                 </Button>
                                 <Menu
                                   anchorEl={anchorEl}
                                   open={Boolean(anchorEl) && menuSessionTs === r.sessionTs}
-                                  onClose={() => { setAnchorEl(null); setMenuSessionTs(null); }}
+                                  onClose={() => {
+                                    setAnchorEl(null);
+                                    setMenuSessionTs(null);
+                                  }}
                                 >
                                   <MenuItem
                                     onClick={() => {
@@ -310,26 +329,32 @@ export default function ManageOrdersPage() {
                               </>
                             )}
 
-                            {/* COOKING: single button to Ready */}
                             {activeTab === 'cooking' && (
                               <Button
                                 variant="contained"
                                 size="small"
-                                sx={{ textTransform: 'none' }}
+                                sx={{
+                                  textTransform: 'none',
+                                  backgroundColor: PINK,
+                                  '&:hover': { backgroundColor: PINK_HOVER },
+                                }}
                                 onClick={() => updateStatus(r.sessionTs, 'ready')}
                               >
                                 Update status to Ready
                               </Button>
                             )}
 
-                            {/* READY: assign delivery for delivery items; picked for pickup items */}
                             {activeTab === 'ready' && (
                               <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
                                 {hasDeliveryReady && (
                                   <Button
                                     variant="contained"
                                     size="small"
-                                    sx={{ textTransform: 'none' }}
+                                    sx={{
+                                      textTransform: 'none',
+                                      backgroundColor: PINK,
+                                      '&:hover': { backgroundColor: PINK_HOVER },
+                                    }}
                                     onClick={() => handleAssignDeliveryForSession(r.sessionTs)}
                                   >
                                     Assign delivery person
@@ -339,7 +364,12 @@ export default function ManageOrdersPage() {
                                   <Button
                                     variant="outlined"
                                     size="small"
-                                    sx={{ textTransform: 'none' }}
+                                    sx={{
+                                      textTransform: 'none',
+                                      borderColor: PINK,
+                                      color: PINK,
+                                      '&:hover': { borderColor: PINK_HOVER, color: PINK_HOVER, backgroundColor: PINK_OUTLINE_BG },
+                                    }}
                                     onClick={() => updateStatus(r.sessionTs, 'picked', 'pickup')}
                                   >
                                     Update status to Picked
@@ -348,7 +378,6 @@ export default function ManageOrdersPage() {
                               </Stack>
                             )}
 
-                            {/* OUT_FOR_DELIVERY: no action (requirements say just show delivery person(s)) */}
                             {activeTab === 'out_for_delivery' && (
                               <Typography variant="body2" color="text.secondary">—</Typography>
                             )}
@@ -451,7 +480,16 @@ export default function ManageOrdersPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDetails} sx={{ textTransform: 'none' }}>Close</Button>
+          <Button
+            onClick={closeDetails}
+            sx={{
+              textTransform: 'none',
+              color: PINK,
+              '&:hover': { color: PINK_HOVER, backgroundColor: PINK_OUTLINE_BG },
+            }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

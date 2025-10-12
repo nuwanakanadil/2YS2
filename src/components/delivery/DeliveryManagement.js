@@ -30,12 +30,12 @@ export default function DeliveryManagement() {
           if (currentOrder) {
             setOrder(currentOrder);
           } else {
-            router.push('/deliveryDashboard');
+            router.push('/delivery/deliveryDashboard');
           }
         }
       } catch (error) {
         console.error('Error fetching order details:', error);
-        router.push('/deliveryDashboard');
+        router.push('/delivery/deliveryDashboard');
       } finally {
         setLoading(false);
       }
@@ -157,7 +157,7 @@ export default function DeliveryManagement() {
             </div>
             <Button 
               variant="outlined" 
-              onClick={() => router.push('/deliveryDashboard')}
+              onClick={() => router.push('deliveryDashboard')}
               className="border-[#6F4E37] text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white"
             >
               Back to Dashboard

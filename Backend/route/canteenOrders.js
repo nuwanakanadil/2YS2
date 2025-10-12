@@ -46,15 +46,17 @@ router.get('/order-sessions', authMiddleware, attachCanteen, requireCanteen, asy
     const { status = 'placed' } = req.query;
 
     const statusMatch =
-      status === 'finished'
-        ? { $in: ['delivered', 'picked'] }
-        : status; // placed|cooking|ready|out_for_delivery
+    status === 'finished'
+       ? { $in: ['delivered', 'picked'] }
+       : status === 'placed'
+         ? { $in: ['pending', 'placed'] }   // show fresh orders too
+         : status; // cooking|ready|out_for_delivery
 
     const pipeline = [
       {
         $match: {
-          canteenId: new mongoose.Types.ObjectId(req.user.canteenId),
-          status: statusMatch instanceof Object ? statusMatch : status,
+          canteenId: req.user.canteenId,
+          status: statusMatch,
         }
       },
       { $sort: { createdAt: 1 } },
@@ -318,7 +320,7 @@ function softmaxPick(items, scoreFn) {
 }
 
 async function chooseDeliveryPerson() {
-  const activeDrivers = await DeliveryPerson.find({ status: 'active' }).lean();
+  const activeDrivers = await DeliveryPerson.find({ currentStatus: 'available' }).lean();
   if (!activeDrivers.length) return null;
 
   const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);

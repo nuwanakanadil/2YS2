@@ -89,18 +89,28 @@ export default function PromotionsList() {
     load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, page]);
 
-  const mutate = async (id, action) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/promotions/${id}/${action}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await load();
-    } catch (e) {
-      alert(`Failed to ${action}: ${e.message}`);
-    }
-  };
+   const mutate = async (id, action) => {
+      try {
+        // primary attempt
+        let res = await fetch(`${API_BASE}/api/promotions/${id}/${action}`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        // allow paused->resume to fallback to publish if your API uses /publish
+        if (!res.ok && action === "resume") {
+          res = await fetch(`${API_BASE}/api/promotions/${id}/publish`, {
+            method: "POST",
+            credentials: "include",
+          });
+        }
+
+        if (!res.ok) throw new Error(await res.text());
+        await load();
+      } catch (e) {
+        alert(`Failed to ${action}: ${e.message}`);
+      }
+    };
 
   const removeOne = async (id) => {
     if (!confirm("Delete this promotion?")) return;
@@ -268,6 +278,14 @@ export default function PromotionsList() {
                           <PlayIcon size={18} />
                         </button>
                       )}
+                      {promo.status === "paused" && (
+                        <button
+                          className="p-1 text-green-600 hover:text-green-900"
+                          onClick={() => mutate(promo._id, "resume")}
+                          title="Resume promotion">
+                          <PlayIcon size={18} />
+                        </button>
+                    )}
                       <button className="p-1 text-blue-600 hover:text-blue-900" onClick={() => openEdit(promo)}>
                         <EditIcon size={18} />
                       </button>

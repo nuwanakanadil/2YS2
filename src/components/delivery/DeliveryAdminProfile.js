@@ -45,7 +45,7 @@ export default function DeliveryAdminProfile() {
       if (response.ok) {
         const data = await response.json();
         if (data.data.role !== 'delivery_admin') {
-          router.push('/delivery-profile');
+          router.push('/delivery/delivery-profile');
           return;
         }
         setAdminInfo(data.data);
@@ -56,11 +56,11 @@ export default function DeliveryAdminProfile() {
           deliveryArea: data.data.deliveryArea || ''
         });
       } else {
-        router.push('/delivery-signin');
+        router.push('/delivery/delivery-signin');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      router.push('/delivery-signin');
+      router.push('/delivery/delivery-signin');
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export default function DeliveryAdminProfile() {
           <Button
             variant="outlined"
             startIcon={<DashboardIcon />}
-            onClick={() => router.push('/delivery-admin-dashboard')}
+            onClick={() => router.push('/delivery/delivery-admin-dashboard')}
             className="border-[#6F4E37] text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white"
           >
             Admin Dashboard

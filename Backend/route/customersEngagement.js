@@ -23,6 +23,7 @@ function statusFromLastDate(dt) {
  * GET /api/customers-engagement/list?search=&status=all|active|new|dormant&page=1&limit=25
  * Returns { items:[{_id,name,email,status,lastEngagement}], total, page, limit }
  */
+// GET /api/customers-engagement/list
 router.get(
   '/list',
   auth,
@@ -40,10 +41,9 @@ router.get(
         userMatch.$or = [{ firstName: rx }, { lastName: rx }, { email: rx }];
       }
 
-      // Base query: page the customers first (fast), then enrich with last activity
       const [users, total] = await Promise.all([
         User.find(userMatch)
-          .select('firstName lastName email createdAt')
+          .select('firstName lastName email createdAt updatedAt')
           .sort({ createdAt: -1 })
           .skip((page - 1) * limit)
           .limit(limit)
@@ -51,19 +51,22 @@ router.get(
         User.countDocuments(userMatch),
       ]);
 
-      // Build a map of last activity using Orders if available, else fall back to user.updatedAt/createdAt
+      // Map user _id (ObjectId) -> string to match Order.userId (string)
+      const idStrs = users.map(u => String(u._id));
+
+      // Build last activity map from Orders using string userId
       let lastMap = new Map();
       if (Order) {
-        const ids = users.map(u => u._id);
         const agg = await Order.aggregate([
-          { $match: { user: { $in: ids } } }, // your Order schema should have "user" ObjectId
-          { $group: { _id: '$user', last: { $max: '$createdAt' } } }
+          { $match: { userId: { $in: idStrs } } },
+          { $group: { _id: '$userId', last: { $max: '$createdAt' } } },
         ]);
         lastMap = new Map(agg.map(a => [String(a._id), a.last]));
       }
 
       const itemsRaw = users.map(u => {
-        const last = lastMap.get(String(u._id)) || u.updatedAt || u.createdAt;
+        const key = String(u._id);
+        const last = lastMap.get(key) || u.updatedAt || u.createdAt;
         return {
           _id: u._id,
           name: `${u.firstName} ${u.lastName}`.trim(),
@@ -73,7 +76,6 @@ router.get(
         };
       });
 
-      // Optional status filter after enrichment
       const items =
         status === 'all'
           ? itemsRaw
@@ -87,42 +89,36 @@ router.get(
   }
 );
 
+
 /**
  * GET /api/customers-engagement/:id/engagement
  * Returns [{ promotion, clicks, purchases, lastActive }]
  * - If your Order schema has a "promoCode" or "promotionId", we group on it.
  * - Otherwise, we aggregate by "product" names as a rough engagement proxy.
  */
+// GET /api/customers-engagement/:id/engagement
 router.get(
   '/:id/engagement',
   auth,
   requireRole('ADMIN', 'PROMO_OFFICER'),
   async (req, res) => {
     try {
-      if (!Order) {
-        // No Order model available — return empty data rather than 500
-        return res.json([]);
-      }
+      if (!Order) return res.json([]);
 
-      // Try to group by "promoCode" if it exists; fallback to product titles
-      const userId = req.params.id;
+      const userIdStr = String(req.params.id);
 
-      // First, detect field availability by peeking one order
-      const sample = await Order.findOne({ user: userId }).lean();
+      // Do we even have orders for this user?
+      const sample = await Order.findOne({ userId: userIdStr }).lean();
       if (!sample) return res.json([]);
 
-      const groupByPromo = Object.prototype.hasOwnProperty.call(sample, 'promoCode') ||
-                           Object.prototype.hasOwnProperty.call(sample, 'promotionId');
-
-      if (groupByPromo) {
-        // Group by promoCode or promotionId
-        const key = Object.prototype.hasOwnProperty.call(sample, 'promoCode') ? '$promoCode' : '$promotionId';
+      // If promoCode field is present in this schema/usecase, prefer grouping by it
+      if (Object.prototype.hasOwnProperty.call(sample, 'promoCode')) {
         const rows = await Order.aggregate([
-          { $match: { user: sample.user } },
+          { $match: { userId: userIdStr } },
           {
             $group: {
-              _id: key,
-              purchases: { $sum: 1 },
+              _id: '$promoCode',               // can be null -> "General"
+              purchases: { $sum: '$quantity' },// total qty per promo
               lastActive: { $max: '$createdAt' },
             }
           },
@@ -130,23 +126,21 @@ router.get(
           { $limit: 50 },
         ]);
 
-        // clicks aren’t tracked in orders; set to purchases*some factor or 0
         return res.json(rows.map(r => ({
           promotion: r._id || 'General',
-          clicks: 0,
+          clicks: 0,                          // not tracked in orders
           purchases: r.purchases || 0,
           lastActive: r.lastActive,
         })));
       }
 
-      // Fallback: group by product name in order items
+      // Otherwise, group by itemName (your schema has itemName, quantity)
       const rows = await Order.aggregate([
-        { $match: { user: sample.user } },
-        { $unwind: '$items' },
+        { $match: { userId: userIdStr } },
         {
           $group: {
-            _id: '$items.productName', // adjust if your item has different field
-            purchases: { $sum: '$items.qty' },
+            _id: '$itemName',
+            purchases: { $sum: '$quantity' },
             lastActive: { $max: '$createdAt' },
           }
         },
@@ -166,5 +160,6 @@ router.get(
     }
   }
 );
+
 
 module.exports = router;

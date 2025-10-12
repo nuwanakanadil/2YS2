@@ -4,6 +4,8 @@ const dayjs = require('dayjs');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const SAFE_DIR = path.join(process.cwd(), 'reports');
+const ALLOWED_EXTS = new Set(['.pdf', '.csv', '.xlsx']);
 
 const auth = require('../middleware/authMiddleware');
 const Canteen = require('../models/Canteen');
@@ -646,6 +648,109 @@ router.post('/generate', auth, async (req, res) => {
     return res.status(201).json({ message: 'Report generated', url, filePath: `reports/${fname}` });
   } catch (e) {
     console.error('POST /reports/generate error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+router.get('/', auth, async (req, res) => {
+  try {
+    const role = req.userRole || req.user?.role;
+    const managerId = req.user?.managerId;
+
+    // Only require managerId for MANAGER role
+    if (role === 'MANAGER' && !managerId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    // ADMIN / PROMO_OFFICER are allowed
+
+    const page  = Math.max(parseInt(req.query.page || '1', 10), 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
+
+    if (!fs.existsSync(SAFE_DIR)) fs.mkdirSync(SAFE_DIR);
+
+    const files = fs.readdirSync(SAFE_DIR)
+      .filter(fn => ALLOWED_EXTS.has(path.extname(fn).toLowerCase()))
+      .map(fn => {
+        const p = path.join(SAFE_DIR, fn);
+        const st = fs.statSync(p);
+        return {
+          _id: fn,
+          name: fn.replace(/[_-]/g, ' ').replace(/\.(pdf|csv|xlsx)$/i, ''),
+          description: '',
+          type: path.extname(fn).slice(1).toUpperCase(),
+          status: 'Completed',
+          createdAt: st.mtime,
+          size: st.size,
+          downloadUrl: `/reports/${fn}`,
+        };
+      })
+      .sort((a,b) => b.createdAt - a.createdAt);
+
+    const total = files.length;
+    const start = (page - 1) * limit;
+    const items = files.slice(start, start + limit);
+
+    res.json({ items, total, page });
+  } catch (e) {
+    console.error('GET /api/reports list error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// GET /api/reports/:name  -> return basic file meta (optional)
+router.get('/:name', auth, async (req, res) => {
+  try {
+    const role = req.userRole || req.user?.role;
+    const managerId = req.user?.managerId;
+    if (role === 'MANAGER' && !managerId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const base = path.basename(req.params.name);
+    const file = path.join(SAFE_DIR, base);
+    if (!fs.existsSync(file)) return res.status(404).json({ message: 'Not found' });
+
+    const st = fs.statSync(file);
+    const ext = path.extname(file).toLowerCase();
+
+    res.json({
+      _id: base,
+      name: base.replace(/\.(pdf|csv|xlsx)$/i, ''),
+      type: ext.slice(1).toUpperCase(),
+      status: 'Completed',
+      createdAt: st.mtime,
+      size: st.size,
+      preview: null,
+      downloadUrl: `/reports/${base}`,
+    });
+  } catch (e) {
+    console.error('GET /api/reports/:name error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// GET /api/reports/:name/download  -> stream file
+router.get('/:name/download', auth, async (req, res) => {
+  try {
+    const role = req.userRole || req.user?.role;
+    const managerId = req.user?.managerId;
+    if (role === 'MANAGER' && !managerId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const base = path.basename(req.params.name);
+    const file = path.join(SAFE_DIR, base);
+    const ext  = path.extname(file).toLowerCase();
+
+    if (!ALLOWED_EXTS.has(ext)) return res.status(400).json({ message: 'Invalid file' });
+    if (!fs.existsSync(file))   return res.status(404).json({ message: 'Not found' });
+
+    return res.download(file, base);
+  } catch (e) {
+    console.error('GET /api/reports/:name/download error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 });

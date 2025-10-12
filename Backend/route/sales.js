@@ -49,15 +49,42 @@ router.get('/dashboard/summary', auth, requireRole('ADMIN','PROMO_OFFICER'), asy
 router.get('/dashboard/sales-trend', auth, requireRole('ADMIN','PROMO_OFFICER'), async (req, res) => {
   try {
     const days = Math.max(parseInt(req.query.days || '7', 10), 1);
+
+    const atStartOfDay = (d) => {
+      const x = new Date(d);
+      x.setHours(0,0,0,0);
+      return x;
+    };
     const since = atStartOfDay(new Date(Date.now() - (days - 1) * 86400000));
 
     const rows = await Order.aggregate([
       { $match: { createdAt: { $gte: since } } },
+
+      // compute a safe "lineTotal" per order doc:
+      // prefer totalAmount, else sessionTotal, else price*quantity, else 0
+      {
+        $addFields: {
+          _lineTotal: {
+            $ifNull: [
+              "$totalAmount",
+              { $ifNull: [
+                "$sessionTotal",
+                { $cond: [
+                  { $and: [ { $isNumber: "$price" }, { $isNumber: "$quantity" } ] },
+                  { $multiply: ["$price", "$quantity"] },
+                  0
+                ] }
+              ] }
+            ]
+          }
+        }
+      },
+
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          sales: { $sum: "$totalAmount" },
-          customers: { $addToSet: "$userId" }, // unique per day
+          sales: { $sum: "$_lineTotal" },
+          customers: { $addToSet: "$userId" },
         }
       },
       {
@@ -71,16 +98,16 @@ router.get('/dashboard/sales-trend', auth, requireRole('ADMIN','PROMO_OFFICER'),
       { $sort: { date: 1 } }
     ]);
 
-    // ensure all days exist
+    // ensure every day is present
     const out = [];
     for (let i = 0; i < days; i++) {
       const d = new Date(since); d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0,10);
-      const found = rows.find(r => r.date === key);
+      const iso = d.toISOString().slice(0, 10);
+      const found = rows.find(r => r.date === iso);
       out.push({
         date: d.toLocaleDateString('en-US', { weekday: 'short' }), // Mon/Tue…
-        sales: found?.sales || 0,
-        customers: found?.customers || 0
+        sales: Number(found?.sales || 0),
+        customers: Number(found?.customers || 0),
       });
     }
 
@@ -90,6 +117,7 @@ router.get('/dashboard/sales-trend', auth, requireRole('ADMIN','PROMO_OFFICER'),
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // GET /api/sales/dashboard/recent-promotions
 router.get('/dashboard/recent-promotions', auth, requireRole('ADMIN','PROMO_OFFICER'), async (req, res) => {

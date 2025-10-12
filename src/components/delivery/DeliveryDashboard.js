@@ -49,11 +49,11 @@ export default function DeliveryDashboard() {
           console.log('Delivery person info:', data.data); // Debug log
         } else {
           // If not authenticated, redirect to login
-          router.push('/delivery-signin');
+          router.push('/delivery/delivery-signin');
         }
       } catch (error) {
         console.error('Error fetching delivery person info:', error);
-        router.push('/delivery-signin');
+        router.push('/delivery/delivery-signin');
       }
     };
 
@@ -130,7 +130,7 @@ export default function DeliveryDashboard() {
         setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
         
         // Redirect to delivery management page
-        router.push(`/delivery-management/${orderId}`);
+        router.push(`/delivery/delivery-management/${orderId}`);
       } else {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to accept order');
@@ -213,12 +213,12 @@ export default function DeliveryDashboard() {
         localStorage.removeItem('deliveryUserId');
         
         // Redirect to login
-        router.push('/delivery-signin');
+        router.push('/delivery/delivery-signin');
       }
     } catch (error) {
       console.error('Error during logout:', error);
       // Force redirect even if logout fails
-      router.push('/delivery-signin');
+      router.push('/delivery/delivery-signin');
     }
   };
 

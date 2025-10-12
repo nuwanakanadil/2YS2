@@ -24,33 +24,53 @@ export default function GenerateReport() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/sales/reports/generate`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          reportType,
-          dateRange,
-          startDate,
-          endDate,
-          format,
-          includeCharts,
-        }),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || "Failed to generate report");
-      alert("Report generated successfully!");
-      router.push("/sales/reports");
-    } catch (err) {
-      console.error("generate report error:", err);
-      alert(`Generate failed: ${err.message}`);
-    } finally {
-      setSubmitting(false);
+  e.preventDefault();
+  setSubmitting(true);
+  try {
+    const res = await fetch(`${API_BASE}/api/sales/reports/generate-download`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reportType,
+        dateRange,
+        startDate,
+        endDate,
+        format,         // "pdf" | "excel" | "csv"
+        includeCharts,  // sent but not used in sample server code; keep if you’ll use later
+      }),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t || "Failed to generate report");
     }
-  };
+
+    // Read server filename from Content-Disposition (if present)
+    const cd = res.headers.get("Content-Disposition") || "";
+    const match = /filename="?([^"]+)"?/.exec(cd);
+    const suggested = match?.[1] || `report.${format === 'pdf' ? 'pdf' : 'csv'}`;
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggested;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    // stay on the page
+  } catch (err) {
+    console.error("generate report error:", err);
+    alert(`Generate failed: ${err.message}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
 
   return (
     <div className="bg-white rounded-lg shadow">

@@ -62,17 +62,17 @@ export default function DeliveryAdminDashboard() {
           const data = await response.json();
           if (data.data.role !== 'delivery_admin') {
             // Not an admin, redirect to regular dashboard
-            router.push('/deliveryDashboard');
+            router.push('/delivery/deliveryDashboard');
             return;
           }
           setAdminInfo(data.data);
         } else {
           // If not authenticated, redirect to login
-          router.push('/delivery-signin');
+          router.push('/delivery/delivery-signin');
         }
       } catch (error) {
         console.error('Error fetching admin info:', error);
-        router.push('/delivery-signin');
+        router.push('/delivery/delivery-signin');
       }
     };
 
@@ -237,11 +237,11 @@ export default function DeliveryAdminDashboard() {
       if (response.ok) {
         localStorage.removeItem('deliveryEmail');
         localStorage.removeItem('deliveryUserId');
-        router.push('/delivery-signin');
+        router.push('/delivery/delivery-signin');
       }
     } catch (error) {
       console.error('Error during logout:', error);
-      router.push('/delivery-signin');
+      router.push('/delivery/delivery-signin');
     }
   };
 

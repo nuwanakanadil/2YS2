@@ -32,6 +32,7 @@ const staffRoutes = require('./route/staff');
 const reportsRouter = require('./route/reports');
 const managerPromotions = require('./route/manager_promotions');
 const promoCode = require('./route/promo_code');
+const deliveryRoute = require('./route/deliveryRoutes');
 
 const { Server } = require('socket.io');
 
@@ -178,6 +179,7 @@ io.on('connection', (socket) => {
     app.use('/api/reports', reportsRouter);
     app.use('/api/manager/promotions', managerPromotions);
     app.use('/api/promocode', promoCode);
+    app.use('/api/delivery', deliveryRoute);
     
     // Start scheduled expiry sweep (optional)
     try {
@@ -218,7 +220,7 @@ io.on('connection', (socket) => {
     });
 
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   } catch (e) {
     console.error('🚫 Server bootstrap failed:', e);
     process.exit(1);
