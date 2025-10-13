@@ -62,25 +62,25 @@ export default function ProfileComponent() {
   }, []);
 
   // NEW: fetch conversations for this customer
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const res = await fetch('http://localhost:5000/api/chat/my-conversations', {
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setConversations(data.conversations || []);
-        } else {
-          console.warn(data.message || 'Failed to load conversations');
+   useEffect(() => {
+      const fetchConversations = async () => {
+        try {
+          const res = await fetch('http://localhost:5000/api/chat/my-conversations', {
+            credentials: 'include',
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setConversations(data.conversations || []);
+          } else {
+            console.warn(data.message || 'Failed to load conversations');
+          }
+        } catch (e) {
+          console.error('Conversations fetch error:', e);
         }
-      } catch (e) {
-        console.error('Conversations fetch error:', e);
-      }
-    };
-
-    fetchConversations();
-  }, []);
+      };
+  
+      fetchConversations();
+    }, []);
 
   const handleChatClick = async (conversationId) => {
     try {
@@ -95,11 +95,11 @@ export default function ProfileComponent() {
       );
 
       // go to the chat room
-      router.push(`/chat/${conversationId}`);
+      router.push(`/user/chat/${conversationId}`);
     } catch (e) {
       console.error('mark read error:', e);
       // still navigate; backend will get fixed next time
-      router.push(`/chat/${conversationId}`);
+      router.push(`/user/chat/${conversationId}`);
     }
   };
 

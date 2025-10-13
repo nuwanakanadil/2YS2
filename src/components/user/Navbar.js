@@ -114,14 +114,14 @@ export default function Navbar() {
             </Link>
           </Tooltip>
           <Tooltip title="About Us" arrow>
-            <Link href="/about">
+            <Link href="/aboutus">
               <IconButton color="inherit" size="large" sx={{ '&:hover': { color: '#FF4081' } }}>
                 <InfoIcon fontSize="inherit" />
               </IconButton>
             </Link>
           </Tooltip>
           <Tooltip title="Contact Us" arrow>
-            <Link href="/contact">
+            <Link href="/contactus">
               <IconButton color="inherit" size="large" sx={{ '&:hover': { color: '#FF4081' } }}>
                 <ContactMailIcon fontSize="inherit" />
               </IconButton>
@@ -133,11 +133,11 @@ export default function Navbar() {
           {user ? (
             <>
               <IconButton onClick={handleMenuOpen}>
-               <Avatar
-                alt={user?.firstName || 'User'}
-                src={user?.profilePic ? `http://localhost:5000/${user.profilePic}` : ''}
-                sx={{ width: 36, height: 36 }}
-              />
+                <Avatar
+                  alt={user?.firstName || 'User'}
+                  src={user?.profilePic ? `http://localhost:5000/${user.profilePic}` : ''}
+                  sx={{ width: 36, height: 36 }}
+                />
               </IconButton>
               <span className="text-white font-semibold cursor-pointer" onClick={handleMenuOpen}>
                 {user?.firstName || 'Profile'}

@@ -3,6 +3,41 @@
 import { useState } from 'react';
 
 export default function CreateCanteen() {
+
+  // ⬇️ NEW: top bar state (only navbar change)
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [displayName, setDisplayName] = useState('Manager');
+  const menuOpen = Boolean(anchorEl);
+  const handleOpenMenu = (e) => setAnchorEl(e.currentTarget);
+  const handleCloseMenu = () => setAnchorEl(null);
+  const handleGoProfile = () => {
+    handleCloseMenu();
+    router.push('/manager/ManagerProfile');
+  };
+  const handleLogout = async () => {
+    handleCloseMenu();
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {}
+    try {
+      localStorage.removeItem('email');
+      localStorage.removeItem('managerId');
+      localStorage.removeItem('canteenId');
+    } catch {}
+    router.push('/manager/ManagerLogin');
+  };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('email');
+      const emailFromStorage = raw ? JSON.parse(raw) : '';
+      if (emailFromStorage) setDisplayName(emailFromStorage);
+    } catch {}
+  }, []);
+  // ⬆️ END top bar additions
+
   const [name, setName] = useState('');
   const [lng, setLng] = useState(null);
   const [lat, setLat] = useState(null);

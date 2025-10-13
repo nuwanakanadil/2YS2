@@ -20,7 +20,7 @@ const columns = [
 // inline normalizer so URLs are always valid for <Image/>
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN || "http://localhost:5000";
 const normalizePic = (src) => {
-  if (!src || typeof src !== "string") return "/profile2.png"; // fallback from /public
+  if (!src || typeof src !== "string") return "/avatar.png"; // fallback from /public
   const clean = src.replace(/\\/g, "/").trim();                 // fix any backslashes
   if (clean.startsWith("/")) return clean;                      // already absolute public path
   if (/^https?:\/\//i.test(clean)) return clean;                // already full URL

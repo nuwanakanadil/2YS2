@@ -19,7 +19,15 @@ import {
   Divider,
   Menu,
   MenuItem,
+
+  // ⬇️ NEW imports for the top bar
+  AppBar,
+  Toolbar,
+  Avatar,
+  IconButton
 } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 
 const TABS = [
   { key: 'placed', label: 'Placed orders' },
@@ -35,6 +43,42 @@ const PINK_HOVER = '#ff5a95';
 const PINK_OUTLINE_BG = 'rgba(255, 64, 129, 0.08)';
 
 export default function ManageOrdersPage() {
+  const router = useRouter();
+
+  // ⬇️ NEW state for top bar menu + display name
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [displayName, setDisplayName] = useState('Manager');
+  const menuOpen = Boolean(anchorEl);
+  const handleOpenMenu = (e) => setAnchorEl(e.currentTarget);
+  const handleCloseMenu = () => setAnchorEl(null);
+  const handleGoProfile = () => {
+    handleCloseMenu();
+    router.push('/manager/ManagerProfile');
+  };
+  const handleLogout = async () => {
+    handleCloseMenu();
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {}
+    try {
+      localStorage.removeItem('email');
+      localStorage.removeItem('managerId');
+      localStorage.removeItem('canteenId');
+    } catch {}
+    router.push('/manager/ManagerLogin');
+  };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('email');
+      const emailFromStorage = raw ? JSON.parse(raw) : '';
+      if (emailFromStorage) setDisplayName(emailFromStorage);
+    } catch {}
+  }, []);
+  // ⬆️ END top bar additions
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
@@ -42,7 +86,7 @@ export default function ManageOrdersPage() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [activeTab, setActiveTab] = useState('placed');
 
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [anchorElStatus, setAnchorElStatus] = useState(null);
   const [menuSessionTs, setMenuSessionTs] = useState(null);
 
   const fmt = (d) => new Date(d).toLocaleString();
@@ -132,10 +176,43 @@ export default function ManageOrdersPage() {
     </Stack>
   ), [rows.length, activeTab]);
 
-  // ----- Render -----
-
   return (
     <Box className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* ⬇️ Hide global navbar on this page */}
+      <style jsx global>{` nav { display: none !important; } `}</style>
+
+      {/* ⬇️ New page-local top bar */}
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#6F4E37', color: 'white', mb: 2 }}>
+        <Toolbar sx={{ minHeight: 64, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={handleOpenMenu} size="small" sx={{ p: 0.5, color: 'inherit' }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.2)' }}>
+                <AccountCircle />
+              </Avatar>
+            </IconButton>
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              onClick={handleOpenMenu}
+              title={displayName}
+            >
+              {displayName}
+            </Typography>
+          </Box>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={menuOpen}
+            onClose={handleCloseMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={handleGoProfile}>Profile</MenuItem>
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+
       <Card className="shadow-lg">
         <CardContent>
           {/* Tabs as pink buttons */}
@@ -293,24 +370,24 @@ export default function ManageOrdersPage() {
                                     '&:hover': { backgroundColor: PINK_HOVER },
                                   }}
                                   onClick={(e) => {
-                                    setAnchorEl(e.currentTarget);
+                                    setAnchorElStatus(e.currentTarget);
                                     setMenuSessionTs(r.sessionTs);
                                   }}
                                 >
                                   Update status
                                 </Button>
                                 <Menu
-                                  anchorEl={anchorEl}
-                                  open={Boolean(anchorEl) && menuSessionTs === r.sessionTs}
+                                  anchorEl={anchorElStatus}
+                                  open={Boolean(anchorElStatus) && menuSessionTs === r.sessionTs}
                                   onClose={() => {
-                                    setAnchorEl(null);
+                                    setAnchorElStatus(null);
                                     setMenuSessionTs(null);
                                   }}
                                 >
                                   <MenuItem
                                     onClick={() => {
                                       updateStatus(r.sessionTs, 'cooking');
-                                      setAnchorEl(null);
+                                      setAnchorElStatus(null);
                                       setMenuSessionTs(null);
                                     }}
                                   >
@@ -319,7 +396,7 @@ export default function ManageOrdersPage() {
                                   <MenuItem
                                     onClick={() => {
                                       updateStatus(r.sessionTs, 'ready');
-                                      setAnchorEl(null);
+                                      setAnchorElStatus(null);
                                       setMenuSessionTs(null);
                                     }}
                                   >

@@ -33,6 +33,9 @@ const reportsRouter = require('./route/reports');
 const managerPromotions = require('./route/manager_promotions');
 const promoCode = require('./route/promo_code');
 const deliveryRoute = require('./route/deliveryRoutes');
+const announcementsRoute = require('./route/announcements');
+const updateManager = require('./route/updateManager');
+const managerImageRoutes = require('./route/managerProfileImg');
 
 const { Server } = require('socket.io');
 
@@ -180,6 +183,9 @@ io.on('connection', (socket) => {
     app.use('/api/manager/promotions', managerPromotions);
     app.use('/api/promocode', promoCode);
     app.use('/api/delivery', deliveryRoute);
+    app.use('/api/announcements', announcementsRoute);
+    app.use('/api/auth', updateManager);
+    app.use('/api/auth', managerImageRoutes);
     
     // Start scheduled expiry sweep (optional)
     try {

@@ -20,6 +20,9 @@ const DeliveryForm = dynamic(() => import("../admin/forms/DeliveryForm"), {
 const InventoryClerkForm = dynamic(() => import("../admin/forms/InventoryClerkForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const AnnouncementForm = dynamic(() => import("../admin/forms/AnnouncementForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 
 const TABLE_MAP = {
@@ -29,6 +32,7 @@ const TABLE_MAP = {
   delivery: { form: "delivery", kind: "user" },
   "inventory-clerk": { form: "inventoryClerk", kind: "user" },
   canteen: { form: "canteen", kind: "canteen" },
+  announcement: { form: "announcement", kind: "announcement" },
 };
 
 const FORMS = {
@@ -43,6 +47,9 @@ const FORMS = {
   ),
   inventoryClerk: (type, data, id, onDone) => (
     <InventoryClerkForm type={type} data={data} id={id} onDone={onDone} />
+  ),
+  announcement: (type, data, id, onDone) => (
+    <AnnouncementForm type={type} data={data} id={id} onDone={onDone} />
   ),
 };
 
@@ -81,16 +88,19 @@ export default function FormModal({ table = "user", type, data, id, onDone }) {
 
         if (cfg.kind === "user") {
           // Preferred generic route (add in backend)
-          url = `${API_ORIGIN}/api/admin/users/${id}`;
+          url = `${API_ORIGIN}/api/auth/admin/users/${id}`;
 
           // If your backend has ONLY customers delete today,
           // fallback to that route when table === 'customer'
           if (table === "customer") {
-            url = `${API_ORIGIN}/api/admin/customers/${id}`;
+            url = `${API_ORIGIN}/api/auth/admin/customers/${id}`;
           }
         } else if (cfg.kind === "canteen") {
           // Only if you expose this in backend
-          url = `${API_ORIGIN}/api/admin/canteen/${id}`;
+          url = `${API_ORIGIN}/api/auth/admin/canteen/${id}`;
+        }else if (cfg.kind === "announcement") {
+          // 🔥 DELETE announcement
+          url = `${API_ORIGIN}/api/announcements/${id}`;
         }
 
         if (!url) throw new Error("Unknown delete target");

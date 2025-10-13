@@ -20,13 +20,58 @@ import {
   MenuItem,
   IconButton,
   Divider,
+
+  // ⬇️ NEW for the page-local top bar
+  AppBar,
+  Toolbar,
+  Avatar,
+  Menu,
+  MenuItem as MUIMenuItem,
 } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import { useRouter } from 'next/navigation';
 
 const ROLES = ['CASHIER', 'COOK', 'SERVER', 'ASSISTANT_MANAGER', 'OTHER'];
 const PINK = '#FF4081';
 
 export default function StaffManagementPage() {
+  const router = useRouter();
+
+  // ⬇️ NEW: top bar state (only navbar change)
+  const [anchorElTop, setAnchorElTop] = useState(null);
+  const [displayName, setDisplayName] = useState('Manager');
+  const menuOpen = Boolean(anchorElTop);
+  const handleOpenMenu = (e) => setAnchorElTop(e.currentTarget);
+  const handleCloseMenu = () => setAnchorElTop(null);
+  const handleGoProfile = () => {
+    handleCloseMenu();
+    router.push('/manager/ManagerProfile');
+  };
+  const handleLogout = async () => {
+    handleCloseMenu();
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {}
+    try {
+      localStorage.removeItem('email');
+      localStorage.removeItem('managerId');
+      localStorage.removeItem('canteenId');
+    } catch {}
+    router.push('/manager/ManagerLogin');
+  };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('email');
+      const emailFromStorage = raw ? JSON.parse(raw) : '';
+      if (emailFromStorage) setDisplayName(emailFromStorage);
+    } catch {}
+  }, []);
+  // ⬆️ END top bar additions
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]); // all staff from API
   const [error, setError] = useState('');
@@ -184,7 +229,7 @@ export default function StaffManagementPage() {
     }
   };
 
-  // ----- header extra (mirrors your sessions count chip, but PINK button) -----
+  // ----- header extra -----
   const headerExtra = (
     <Stack direction="row" spacing={1}>
       <Button
@@ -221,11 +266,45 @@ export default function StaffManagementPage() {
 
   return (
     <Box className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* ⬇️ Hide global navbar on this page */}
+      <style jsx global>{` nav { display: none !important; } `}</style>
+
+      {/* ⬇️ New page-local top bar (profile icon + name + menu) */}
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#6F4E37', color: 'white', mb: 2 }}>
+        <Toolbar sx={{ minHeight: 64, display: 'flex', justifyContent: 'flex-end' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton onClick={handleOpenMenu} size="small" sx={{ p: 0.5, color: 'inherit' }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.2)' }}>
+                <AccountCircle />
+              </Avatar>
+            </IconButton>
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              onClick={handleOpenMenu}
+              title={displayName}
+            >
+              {displayName}
+            </Typography>
+          </Stack>
+
+          <Menu
+            anchorEl={anchorElTop}
+            open={menuOpen}
+            onClose={handleCloseMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MUIMenuItem onClick={handleGoProfile}>Profile</MUIMenuItem>
+            <MUIMenuItem onClick={handleLogout}>Logout</MUIMenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+
       <Card className="shadow-lg">
         <CardContent>
-          {/* Top controls: search + filters (styled like your top bar) */}
+          {/* Top controls: search + filters */}
           <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
-
             <TextField
               size="small"
               placeholder="Search the employees"

@@ -17,7 +17,7 @@ const columns = [
 
 const API = process.env.NEXT_PUBLIC_API_ORIGIN || "http://localhost:5000";
 const normalizePic = (src) => {
-  if (!src || typeof src !== "string") return "/profile2.png";
+  if (!src || typeof src !== "string") return "/avatar.png";
   const clean = src.replace(/\\/g, "/").trim();
   if (clean.startsWith("/")) return clean;
   if (/^https?:\/\//i.test(clean)) return clean;
@@ -36,7 +36,7 @@ const InventoryClerksPage = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ search, page, limit, role: "INVENTORY_CLERK" });
-      const r = await fetch(`${API.replace(/\/+$/,'')}/api/admin/users?${params}`, {
+      const r = await fetch(`${API.replace(/\/+$/,'')}/api/auth/admin/users?${params}`, {
         credentials: "include",
       });
       const j = await r.json();

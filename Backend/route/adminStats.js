@@ -6,12 +6,13 @@ const requireRole = require('../middleware/requireRole');
 const User = require('../models/User');
 const Manager = require('../models/Manager');
 const Canteen = require('../models/Canteen');
+const Delivery = require('../models/DeliveryPerson');
 
 router.get('/stats/counts', auth, requireRole('ADMIN'), async (req, res) => {
   try {
     const [customers, deliveries, managers, shops] = await Promise.all([
       User.countDocuments({ role: 'CUSTOMER' }),
-      User.countDocuments({ role: 'DELIVERY' }),
+      Delivery.countDocuments({}),
       Manager.countDocuments({}),           // managers you create at approval
       Canteen.countDocuments({}),           // treat canteens as “shops”
     ]);

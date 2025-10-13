@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Manager = require('../models/Manager');
 const Canteen = require('../models/Canteen');
+const DeliveryPerson = require('../models/DeliveryPerson');
 const authMiddleware = require('../middleware/authMiddleware');
 
 
@@ -293,16 +294,14 @@ router.post('/admin/create-user', auth, requireRole('ADMIN'), async (req, res) =
 
     // Send email with credentials (best-effort; do not block success entirely)
     try {
-      const { sendNewUserEmail } = require('../utils/mailer');
+      const { sendNewUserEmail } = require('../utils/brevoMailer');
       await sendNewUserEmail({
         to: user.email,
         name: `${user.firstName} ${user.lastName}`.trim(),
         tempPassword,
       });
     } catch (mailErr) {
-      console.error('Email send error:', mailErr);
-      // We still return 201 because the account was created.
-      // Optionally include a hint in the response:
+      console.error('[Brevo] new user email failed:', mailErr?.message);
       return res.status(201).json({
         message: 'User created, but failed to send email',
         userId: user._id,

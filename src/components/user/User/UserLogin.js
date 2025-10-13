@@ -39,6 +39,7 @@ export default function UserLogin() {
       else if (data.role === 'MANAGER') router.push('/manager/Dashboard');
       else if (data.role === 'DELIVERY') router.push('/delivery');
       else if (data.role === 'PROMO_OFFICER') router.push('/sales');
+      else if (data.role === 'INVENTORY_CLERK') router.push('/list/inventory');
       else router.push('/user/userProfile'); // CUSTOMER
 
     } else {

@@ -3,13 +3,55 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Stack, Button, TextField, MenuItem,
-  Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, FormControlLabel, Switch
+  Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, FormControlLabel, Switch,
+
+  // ⬇️ NEW: imports for the page-local top bar
+  AppBar, Toolbar, Avatar, IconButton, Menu, MenuItem as MUIMenuItem,
 } from '@mui/material';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import { useRouter } from 'next/navigation';
 
 const PINK = '#FF4081';
 const TABS = ['TRENDING', 'INCOME', 'SALES_SUMMARY', 'PEAK_HOURS', 'CHANNEL_MIX', 'LOW_PERFORMING'];
 
 export default function ReportsPage() {
+  const router = useRouter();
+
+  // ⬇️ NEW: top bar state (only navbar change)
+  const [anchorElTop, setAnchorElTop] = useState(null);
+  const [displayName, setDisplayName] = useState('Manager');
+  const topMenuOpen = Boolean(anchorElTop);
+
+  const handleOpenTopMenu = (e) => setAnchorElTop(e.currentTarget);
+  const handleCloseTopMenu = () => setAnchorElTop(null);
+  const handleGoProfile = () => {
+    handleCloseTopMenu();
+    router.push('/manager/ManagerProfile');
+  };
+  const handleLogout = async () => {
+    handleCloseTopMenu();
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {}
+    try {
+      localStorage.removeItem('email');
+      localStorage.removeItem('managerId');
+      localStorage.removeItem('canteenId');
+    } catch {}
+    router.push('/manager/ManagerLogin');
+  };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('email');
+      const emailFromStorage = raw ? JSON.parse(raw) : '';
+      if (emailFromStorage) setDisplayName(emailFromStorage);
+    } catch {}
+  }, []);
+  // ⬆️ END top bar additions
+
   const [active, setActive] = useState('TRENDING');
 
   // date range defaults: first day of month -> today
@@ -175,6 +217,41 @@ export default function ReportsPage() {
 
   return (
     <Box className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* ⬇️ Hide the global navbar on this page */}
+      <style jsx global>{` nav { display: none !important; } `}</style>
+
+      {/* ⬇️ Page-local top bar (profile icon + name + menu) */}
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#6F4E37', color: 'white', mb: 2 }}>
+        <Toolbar sx={{ minHeight: 64, display: 'flex', justifyContent: 'flex-end' }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton onClick={handleOpenTopMenu} size="small" sx={{ p: 0.5, color: 'inherit' }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.2)' }}>
+                <AccountCircle />
+              </Avatar>
+            </IconButton>
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              onClick={handleOpenTopMenu}
+              title={displayName}
+            >
+              {displayName}
+            </Typography>
+          </Stack>
+
+          <Menu
+            anchorEl={anchorElTop}
+            open={topMenuOpen}
+            onClose={handleCloseTopMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MUIMenuItem onClick={handleGoProfile}>Profile</MUIMenuItem>
+            <MUIMenuItem onClick={handleLogout}>Logout</MUIMenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+
       <Card className="shadow-lg">
         <CardContent>
           {/* Tabs */}

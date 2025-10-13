@@ -204,7 +204,7 @@ export default function InventoryManagement() {
             <p className="text-amber-700">Manage your inventory items and stock levels</p>
           </div>
           <a
-            href="/admin/inventory-monitoring"
+            href="/list/inventory-monitoring"
             className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -294,7 +294,7 @@ export default function InventoryManagement() {
                         onChange={handleChange}
                         placeholder="Enter item name"
                         required
-                        className="w-full border-2 border-amber-200 focus:border-amber-500 rounded-lg p-3 focus:ring-2 focus:ring-amber-200 transition-all"
+                        className="w-full border-2 border-amber-200 focus:border-amber-500 rounded-lg p-3 focus:ring-2 focus:ring-amber-200 transition-all text-black-500"
                       />
                     </div>
                     <div>

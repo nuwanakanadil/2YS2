@@ -17,6 +17,35 @@ function currentStatus(start, end) {
   if (now.isAfter(dayjs(end))) return 'ended';
   return 'active';
 }
+
+function validateBody({ name, startDate, endDate, discountType, discountValue }) {
+  // name
+  if (!String(name || '').trim()) return 'Name is required';
+
+  // dates
+  const s = dayjs(startDate);
+  const e = dayjs(endDate);
+  if (!s.isValid() || !e.isValid()) return 'Start and End dates must be valid';
+  if (!e.isAfter(s)) return 'End date/time must be after the start date/time';
+
+  // discount type
+  const allowed = ['percentage', 'fixed', 'bogo', 'free'];
+  if (!allowed.includes(String(discountType || '').toLowerCase())) {
+    return 'Invalid discount type';
+  }
+
+  // discount value (only for percentage/fixed)
+  if (['percentage', 'fixed'].includes(String(discountType).toLowerCase())) {
+    const n = Number(discountValue);
+    if (!Number.isFinite(n) || n < 0) return 'Discount value must be a non-negative number';
+    if (String(discountType).toLowerCase() === 'percentage' && n > 100) {
+      return 'Percentage discount cannot exceed 100';
+    }
+  }
+
+  return null; // ✅ valid
+}
+
 const isRole = (req, role) => String(req.user?.role || '').toUpperCase() === role;
 
 /* --------- FIXED ROUTES FIRST ---------- */
@@ -283,6 +312,9 @@ async function updatePromotion(req, res) {
     promotion: doc
   });
 }
+
+router.put('/:id', auth, requireRole('ADMIN','PROMO_OFFICER'), updatePromotion);
+router.patch('/:id', auth, requireRole('ADMIN','PROMO_OFFICER'), updatePromotion);
 
 /* -------------------- DELETE -------------------- */
 router.delete('/:id', auth, requireRole('ADMIN','PROMO_OFFICER'), async (req,res) => {

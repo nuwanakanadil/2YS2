@@ -17,9 +17,55 @@ import {
   DialogActions,
   TextField,
   Rating,
+
+  // ⬇️ NEW for the page-local top bar
+  AppBar,
+  Toolbar,
+  Avatar,
+  IconButton,
+  Menu,
+  MenuItem,
 } from '@mui/material';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import { useRouter } from 'next/navigation';
 
 export default function CanteenDashboard() {
+  const router = useRouter();
+
+  // ⬇️ NEW: top bar state (only navbar change)
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [displayName, setDisplayName] = useState('Manager');
+  const menuOpen = Boolean(anchorEl);
+  const handleOpenMenu = (e) => setAnchorEl(e.currentTarget);
+  const handleCloseMenu = () => setAnchorEl(null);
+  const handleGoProfile = () => {
+    handleCloseMenu();
+    router.push('/manager/ManagerProfile');
+  };
+  const handleLogout = async () => {
+    handleCloseMenu();
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {}
+    try {
+      localStorage.removeItem('email');
+      localStorage.removeItem('managerId');
+      localStorage.removeItem('canteenId');
+    } catch {}
+    router.push('/manager/ManagerLogin');
+  };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('email');
+      const emailFromStorage = raw ? JSON.parse(raw) : '';
+      if (emailFromStorage) setDisplayName(emailFromStorage);
+    } catch {}
+  }, []);
+  // ⬆️ END top bar additions
+
   const [loading, setLoading] = useState(true);
   const [canteenName, setCanteenName] = useState('');
   const [err, setErr] = useState('');
@@ -51,25 +97,23 @@ export default function CanteenDashboard() {
   };
 
   // edit product modal
-const [editOpen, setEditOpen] = useState(false);
-const [editId, setEditId] = useState(null);
-const [ename, setEname] = useState('');
-const [edesc, setEdesc] = useState('');
-const [eprice, setEprice] = useState('');
-const [eimage, setEimage] = useState(null);
-const [eimagePreview, setEimagePreview] = useState('');
-const [eSubmitting, setESubmitting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [ename, setEname] = useState('');
+  const [edesc, setEdesc] = useState('');
+  const [eprice, setEprice] = useState('');
+  const [eimage, setEimage] = useState(null);
+  const [eimagePreview, setEimagePreview] = useState('');
+  const [eSubmitting, setESubmitting] = useState(false);
 
-const resetEditForm = () => {
-  setEditId(null);
-  setEname('');
-  setEdesc('');
-  setEprice('');
-  setEimage(null);
-  setEimagePreview('');
-};
-
-
+  const resetEditForm = () => {
+    setEditId(null);
+    setEname('');
+    setEdesc('');
+    setEprice('');
+    setEimage(null);
+    setEimagePreview('');
+  };
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -80,32 +124,31 @@ const resetEditForm = () => {
   };
 
   const openEdit = (item) => {
-  setEditId(item._id);
-  setEname(item.name || '');
-  setEdesc(item.description || '');
-  setEprice(item.price != null ? String(item.price) : '');
-  setEimage(null);
-  setEimagePreview(item.image ? `http://localhost:5000/${item.image}` : '');
-  setEditOpen(true);
-};
+    setEditId(item._id);
+    setEname(item.name || '');
+    setEdesc(item.description || '');
+    setEprice(item.price != null ? String(item.price) : '');
+    setEimage(null);
+    setEimagePreview(item.image ? `http://localhost:5000/${item.image}` : '');
+    setEditOpen(true);
+  };
 
-const closeEdit = () => {
-  if (!eSubmitting) {
-    setEditOpen(false);
-    resetEditForm();
-  }
-};
+  const closeEdit = () => {
+    if (!eSubmitting) {
+      setEditOpen(false);
+      resetEditForm();
+    }
+  };
 
-const handleEditImage = (file) => {
-  setEimage(file || null);
-  if (file) {
-    const url = URL.createObjectURL(file);
-    setEimagePreview(url);
-  } else {
-    setEimagePreview('');
-  }
-};
-
+  const handleEditImage = (file) => {
+    setEimage(file || null);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setEimagePreview(url);
+    } else {
+      setEimagePreview('');
+    }
+  };
 
   const fetchProducts = async () => {
     const res = await fetch('http://localhost:5000/api/loadproducts/mine', {
@@ -170,52 +213,50 @@ const handleEditImage = (file) => {
   };
 
   const handleUpdate = async () => {
-  if (!ename.trim()) {
-    alert('Name is required');
-    return;
-  }
-  if (eprice === '') {
-    alert('Price is required');
-    return;
-  }
-  const numericPrice = Number(eprice);
-  if (Number.isNaN(numericPrice) || numericPrice < 0) {
-    alert('Price must be a non-negative number');
-    return;
-  }
+    if (!ename.trim()) {
+      alert('Name is required');
+      return;
+    }
+    if (eprice === '') {
+      alert('Price is required');
+      return;
+    }
+    const numericPrice = Number(eprice);
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      alert('Price must be a non-negative number');
+      return;
+    }
 
-  try {
-    setESubmitting(true);
-    const form = new FormData();
-    form.append('name', ename);
-    form.append('description', edesc);
-    form.append('price', numericPrice);
-    if (eimage) form.append('image', eimage);
+    try {
+      setESubmitting(true);
+      const form = new FormData();
+      form.append('name', ename);
+      form.append('description', edesc);
+      form.append('price', numericPrice);
+      if (eimage) form.append('image', eimage);
 
-    const res = await fetch(`http://localhost:5000/api/products/${editId}`, {
-      method: 'PUT',
-      credentials: 'include',
-      body: form,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update');
+      const res = await fetch(`http://localhost:5000/api/products/${editId}`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update');
 
-    // Patch products list
-    setProducts((prev) =>
-      prev.map((p) => (p._id === editId ? data.product : p))
-    );
+      setProducts((prev) =>
+        prev.map((p) => (p._id === editId ? data.product : p))
+      );
 
-    alert('Product updated');
-    setESubmitting(false);
-    setEditOpen(false);
-    resetEditForm();
-  } catch (e) {
-    console.error(e);
-    setESubmitting(false);
-    alert(e.message || 'Network error while updating');
-  }
-};
-
+      alert('Product updated');
+      setESubmitting(false);
+      setEditOpen(false);
+      resetEditForm();
+    } catch (e) {
+      console.error(e);
+      setESubmitting(false);
+      alert(e.message || 'Network error while updating');
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -274,6 +315,41 @@ const handleEditImage = (file) => {
 
   return (
     <Box className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* ⬇️ Hide global navbar on this page */}
+      <style jsx global>{` nav { display: none !important; } `}</style>
+
+      {/* ⬇️ New page-local top bar (profile icon + name + menu) */}
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#6F4E37', color: 'white', mb: 2 }}>
+        <Toolbar sx={{ minHeight: 64, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={handleOpenMenu} size="small" sx={{ p: 0.5, color: 'inherit' }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(255,255,255,0.2)' }}>
+                <AccountCircle />
+              </Avatar>
+            </IconButton>
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: 600, cursor: 'pointer' }}
+              onClick={handleOpenMenu}
+              title={displayName}
+            >
+              {displayName}
+            </Typography>
+          </Box>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={menuOpen}
+            onClose={handleCloseMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={handleGoProfile}>Profile</MenuItem>
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+
       {/* Top row */}
       <Grid container spacing={3}>
         {/* LEFT: Canteen details + add product */}

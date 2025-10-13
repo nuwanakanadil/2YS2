@@ -19,121 +19,120 @@ export default function ProductDetail() {
   });
 
   useEffect(() => {
-  if (!id) return;
-  // Fetch product by ID
-  fetch(`http://localhost:5000/api/products/${id}`)
-    .then(res => res.json())
-    .then(data => {
-      setItem(data);
-    })
-    .catch(err => console.error("Failed to fetch product", err));
-  fetch(`http://localhost:5000/api/reviews/${id}`)
-    .then(res => res.json())
-    .then(data => {
-      setReviews(data.reviews);
-      setAverageRating(data.averageRating);
-      setDistribution(data.distribution);
-    })
-    .catch(err => console.error(err));
-}, [id]);
+    if (!id) return;
+    // Fetch product by ID
+    fetch(`http://localhost:5000/api/products/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        setItem(data);
+      })
+      .catch(err => console.error("Failed to fetch product", err));
+    fetch(`http://localhost:5000/api/reviews/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        setReviews(data.reviews);
+        setAverageRating(data.averageRating);
+        setDistribution(data.distribution);
+      })
+      .catch(err => console.error(err));
+  }, [id]);
 
   const createArray = (count) => Array.from({ length: count });
 
- const submitReview = async () => {
-  if (newReview.name && newReview.comment && newReview.rating > 0) {
-    const payload = {
-      productId: id,
-      ...newReview
-    };
+  const submitReview = async () => {
+    if (newReview.name && newReview.comment && newReview.rating > 0) {
+      const payload = {
+        productId: id,
+        ...newReview
+      };
 
-    const res = await fetch(`http://localhost:5000/api/reviews/addNewReview`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      const res = await fetch(`http://localhost:5000/api/reviews/addNewReview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setNewReview({ name: '', comment: '', rating: 0 });
+        const data = await res.json();
+        const newReviewFormatted = {
+          ...data,
+          date: "Just now"
+        };
+        setReviews(prev => [newReviewFormatted, ...prev.slice(0, 9)]);
+        fetch(`http://localhost:5000/api/reviews/${id}`)
+          .then(res => res.json())
+          .then(data => {
+            setAverageRating(data.averageRating);
+            setDistribution(data.distribution);
+          });
+      }
+    }
+  };
+
+  const handleAddToCart = async () => {
+    const email = localStorage.getItem("email");
+    const userId = localStorage.getItem("userId");
+
+    if (!email || !userId) {
+      alert("Please log in to add items to cart.");
+      router.push("user/signin");
+      return;
+    }
+
+    const res = await fetch("http://localhost:5000/api/cart/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "userId": userId
+      },
+      credentials:"include",
+      body: JSON.stringify({
+        productId: item._id,
+        name: item.name,
+        price: item.price,
+        image: item.image
+      })
     });
 
+    const data = await res.json();
     if (res.ok) {
-      setNewReview({ name: '', comment: '', rating: 0 });
-      const data = await res.json();
-      const newReviewFormatted = {
-        ...data,
-        date: "Just now"
-      };
-      setReviews(prev => [newReviewFormatted, ...prev.slice(0, 9)]);
-      fetch(`http://localhost:5000/api/reviews/${id}`)
-        .then(res => res.json())
-        .then(data => {
-          setAverageRating(data.averageRating);
-          setDistribution(data.distribution);
-        });
+      alert("Item added to cart successfully!");
+    } else {
+      alert(data.message);
     }
-  }
-};
+  };
 
-const handleAddToCart = async () => {
-  const email = localStorage.getItem("email");
-  const userId = localStorage.getItem("userId");
+  const detectFood = async () => {
+    const imageUrl = `http://localhost:5000/${item.image}`; // image from your Node backend
 
-  if (!email || !userId) {
-    alert("Please log in to add items to cart.");
-    router.push("/user/signin");
-    return;
-  }
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    const file = new File([blob], "image.jpg", { type: blob.type });
 
-  const res = await fetch("http://localhost:5000/api/cart/add", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "userId": userId
-    },
-    credentials:"include",
-    body: JSON.stringify({
-      productId: item._id,
-      name: item.name,
-      price: item.price,
-      image: item.image
-    })
-  });
+    const formData = new FormData();
+    formData.append("image", file);
 
-  const data = await res.json();
-  if (res.ok) {
-    alert("Item added to cart successfully!");
-  } else {
-    alert(data.message);
-  }
-};
+    const res = await fetch("http://localhost:5050/predict", {
+      method: "POST",
+      body: formData,
+    });
 
+    const data = await res.json();
+    if (res.ok) {
+      console.log("Detection result:", data);
+      router.push(`/CaloryDisplay?food=${data.prediction}`);
+    } else {
+      alert("Detection failed: " + data.error);
+    }
+  };
 
-const detectFood = async () => {
-  const imageUrl = `http://localhost:5000/${item.image}`; // image from your Node backend
-
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
-  const file = new File([blob], "image.jpg", { type: blob.type });
-
-  const formData = new FormData();
-  formData.append("image", file);
-
-  const res = await fetch("http://localhost:5050/predict", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await res.json();
-  if (res.ok) {
-    console.log("Detection result:", data);
-    router.push(`/CaloryDisplay?food=${data.prediction}`);
-  } else {
-    alert("Detection failed: " + data.error);
-  }
-};
-
-const contactSeller = async () => {
-  // must be logged in as customer
+  const contactSeller = async () => {
+    // must be logged in as customer
     const userId = localStorage.getItem('userId');
     if (!userId) {
       alert('Please log in to chat with the seller.');
-      router.push('/user/signin');
+      router.push('user/signin');
       return;
     }
     try {
@@ -149,13 +148,12 @@ const contactSeller = async () => {
         return;
       }
       // go to /chat/[conversationId]
-      router.push(`/user/chat/${data.conversationId}`);
+      router.push(`../chat/${data.conversationId}`);
     } catch (e) {
       console.error(e);
       alert('Network error starting chat');
     }
-  }
-
+  };
 
   if (!item) return <div className="text-center text-white mt-10">Loading...</div>;
 
@@ -194,45 +192,38 @@ const contactSeller = async () => {
             </button>
             <p className="mb-4 text-white">{item.description}</p>
 
-            {/* <div className="flex gap-3 justify-center mb-4">
-              <span>Select Color:</span>
-              <span className="w-5 h-5 rounded-full bg-orange-500 border"></span>
-              <span className="w-5 h-5 rounded-full bg-green-500 border"></span>
-              <span className="w-5 h-5 rounded-full bg-black border"></span>
-            </div> */}
-
             <div className="flex gap-4 justify-center">
               <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
-              onClick={contactSeller}>
+                onClick={contactSeller}>
                 Contact Seller
               </button>
               <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
                 onClick={handleAddToCart}>
                 Add to Cart
-                </button>
-<button
-  className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
-  onClick={() => {
-    const userId = localStorage.getItem("userId");
-    addToDraft(
-      {
-        _id: item._id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-      },
-      userId
-    );
-    // go to the multi-item order page
-    router.push("/user/Order/[id]");
-  }}
->
-  Place Order
-</button>
+              </button>
+              <button
+                className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
+                onClick={() => {
+                  const userId = localStorage.getItem("userId");
+                  addToDraft(
+                    {
+                      _id: item._id,
+                      name: item.name,
+                      price: item.price,
+                      image: item.image,
+                    },
+                    userId
+                  );
+                  // go to the multi-item order page
+                  router.push("/user/Order/[id]");
+                }}
+              >
+                Place Order
+              </button>
               <button className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-pink-500"
-              onClick={detectFood}>
+                onClick={detectFood}>
                 detect food
-                </button>
+              </button>
             </div>
           </div>
         </div>
@@ -293,13 +284,13 @@ const contactSeller = async () => {
           <input
             type="text"
             placeholder="Your Name"
-            className="w-full p-2 mb-2 border rounded"
+            className="w-full p-2 mb-2 border rounded text-black"
             value={newReview.name}
             onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
           />
           <textarea
             placeholder="Your Comment"
-            className="w-full p-2 mb-2 border rounded"
+            className="w-full p-2 mb-2 border rounded text-black"
             value={newReview.comment}
             onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
           />
@@ -308,9 +299,7 @@ const contactSeller = async () => {
             {[1, 2, 3, 4, 5].map((star) => (
               <span
                 key={star}
-                className={`cursor-pointer text-xl ${
-                  newReview.rating >= star ? "text-yellow-400" : "text-gray-400"
-                }`}
+                className={`cursor-pointer text-xl ${newReview.rating >= star ? "text-yellow-400" : "text-gray-400"}`}
                 onClick={() => setNewReview({ ...newReview, rating: star })}
               >
                 ★
