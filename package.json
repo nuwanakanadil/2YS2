@@ -1,0 +1,50 @@
+{
+  "name": "mealmatrix",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@hookform/resolvers": "3.9.0",
+    "@mui/icons-material": "7.3.1",
+    "@mui/material": "7.3.1",
+    "@types/react-big-calendar": "1.8.9",
+    "dayjs": "1.11.13",
+    "html2canvas": "1.4.1",
+    "js-cookie": "3.0.5",
+    "jspdf": "^3.0.2",
+    "lucide-react": "0.525.0",
+    "moment": "2.30.1",
+    "mongoose": "8.17.1",
+    "multer": "^2.0.2",
+    "next": "15.5.3",
+    "nodemailer": "^7.0.6",
+    "react": "18.3.1",
+    "react-big-calendar": "1.13.2",
+    "react-calendar": "5.0.0",
+    "react-dom": "18.3.1",
+    "react-hook-form": "7.52.2",
+    "react-icons": "5.5.0",
+    "recharts": "^2.12.7",
+    "socket.io-client": "^4.8.1",
+    "zod": "3.23.8",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "20",
+    "@types/react": "18",
+    "@types/react-dom": "18",
+    "eslint": "8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "8",
+    "tailwind-scrollbar-hide": "1.1.7",
+    "tailwindcss": "3.4.1",
+    "typescript": "5"
+  }
+}
